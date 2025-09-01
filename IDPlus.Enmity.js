@@ -44,7 +44,6 @@ const CONFIG = {
       userId: "753944929973174283",    // User ID that will appear to send the message
       content: "Hello! This is an auto message from IDPlus!",
       // Timestamp will be set to 2 minutes before plugin enable time
-      embed: { },
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
@@ -326,11 +325,17 @@ const CONFIG = {
   }
   
   // Create a fake message that appears to be from another user
+
+
+
+
+
+  // Create a fake message that appears to be from another user
   async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp }) {
     const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
     const target = await normalizeTarget({ channelId, dmUserId });
     
-    // Handle timestamp safely
+    // Handle timestamp safely - always use future timestamp to stay at bottom
     let messageTimestamp;
     try {
       if (timestamp) {
@@ -341,15 +346,16 @@ const CONFIG = {
         }
         messageTimestamp = date.toISOString();
       } else {
-        // Default: future timestamp to appear below all messages
+        // Default: future timestamp far in the future to always stay at bottom
         const futureDate = new Date();
-        futureDate.setFullYear(futureDate.getFullYear() + 1);
+        futureDate.setFullYear(futureDate.getFullYear() + 10); // 10 years in the future
         messageTimestamp = futureDate.toISOString();
       }
     } catch (error) {
-      // Fallback to current time if timestamp parsing fails
-      console.error("Timestamp parsing failed, using current time:", error);
-      messageTimestamp = new Date().toISOString();
+      // Fallback to far future timestamp
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 10);
+      messageTimestamp = futureDate.toISOString();
     }
     
     // Get user info if userId is provided
@@ -358,6 +364,7 @@ const CONFIG = {
       userInfo = await getUserInfo(userId);
     }
     
+    // Only include embeds if they are provided and have content
     const embeds = (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) ? [{
       type: "rich",
       title: embed.title || undefined,
@@ -365,7 +372,7 @@ const CONFIG = {
       url: embed.url || undefined,
       thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
     }] : [];
-
+  
     const fake = {
       id: String(Date.now() + Math.floor(Math.random() * 1000)),
       type: 0,
@@ -379,7 +386,7 @@ const CONFIG = {
         global_name: userInfo?.global_name,
         bot: userInfo?.bot || false
       },
-      embeds,
+      embeds, // This will be empty array if no embed is provided
       timestamp: messageTimestamp,
       edited_timestamp: null,
       flags: 0,
@@ -391,10 +398,9 @@ const CONFIG = {
     };
     
     MessageActions?.receiveMessage?.(target, fake);
-    api.showToast("Fake message injected");
+    api.showToast("Fake message injected (persistent bottom)");
     return fake;
   }
-  
   async function injectMessage({ channelId, dmUserId, content, embed }) {
     const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
     const target = await normalizeTarget({ channelId, dmUserId });
