@@ -44,10 +44,7 @@ const CONFIG = {
       userId: "753944929973174283",    // User ID that will appear to send the message
       content: "Hello! This is an auto message from IDPlus!",
       // Timestamp will be set to 2 minutes before plugin enable time
-      embed: {
-        title: "Auto Message",
-        description: "This message appears to be from 2 minutes ago"
-      },
+      embed: { },
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
