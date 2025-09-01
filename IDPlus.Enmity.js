@@ -9,6 +9,7 @@
  *  - DM helper + injectMessage + sendMessage (with embed)
  *  - Fake messages from other users (manual + auto on startup)
  *  - Persistent fake messages that survive Discord updates/refreshes
+ *  - Chat freezing to keep fake messages at bottom
  *
  * Safety:
  *  - No Enmity UI usage (no settings screen, no Form components)
@@ -30,7 +31,8 @@ const CONFIG = {
     dispatcher:  true,
     linkBuilders:true,
     autoFakeMessages: true,  // Send fake messages automatically on startup
-    persistentMessages: true // Keep fake messages persistent across refreshes
+    persistentMessages: true, // Keep fake messages persistent across refreshes
+    chatFreezing: true       // Freeze chats to keep fake messages at bottom
   },
 
   // Delay (ms) before patching to ensure modules are loaded
@@ -44,11 +46,17 @@ const CONFIG = {
       channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
       dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
       userId: "753944929973174283",    // User ID that will appear to send the message
-      content: "Hellos! this is a scam!",
+      content: "Hello! This is an auto message from IDPlus!",
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
     // Add more auto messages as needed...
+  ],
+
+  // Add user IDs or channel IDs to freeze their chats (if features.chatFreezing is true)
+  frozenChats: [
+    "753944929973174283", // User ID to freeze
+    // "channel_id_here", // Or channel ID to freeze
   ],
 
   // ID remaps (snowflakes as strings)
@@ -108,6 +116,7 @@ const CONFIG = {
 
   // Store persistent fake messages
   const persistentFakeMessages = new Map();
+  let ChannelStore = null;
 
   // Map helpers
   const SNOWFLAKE_RE = /^\d{17,21}$/;
@@ -121,6 +130,25 @@ const CONFIG = {
   function mapId(id, m) {
     const k = String(id ?? "");
     return m.get(k) ?? k;
+  }
+
+  // Check if a channel should be frozen
+  function shouldFreezeChannel(channelId) {
+    if (!channelId || !CONFIG.frozenChats?.length || !CONFIG.features.chatFreezing) return false;
+    
+    // Check if channel ID is in frozen list
+    if (CONFIG.frozenChats.includes(channelId)) return true;
+    
+    // Check if this is a DM channel with a frozen user
+    if (ChannelStore) {
+      const channel = ChannelStore.getChannel?.(channelId);
+      if (channel && channel.recipients && channel.recipients.length === 1) {
+        const recipientId = channel.recipients[0];
+        return CONFIG.frozenChats.includes(recipientId);
+      }
+    }
+    
+    return false;
   }
 
   // Clipboard rewrite
@@ -276,8 +304,9 @@ const CONFIG = {
     } catch {}
   }
 
+  // Patch message loading and freezing
   async function patchDispatcher() {
-    if (!CONFIG.features.dispatcher) return;
+    if (!CONFIG.features.dispatcher && !CONFIG.features.chatFreezing) return;
     try {
       const FluxDispatcher = get(api.common(), "FluxDispatcher", null);
       if (!FluxDispatcher?.dispatch) { api.showToast("IDPlus: Dispatcher missing"); return; }
@@ -287,6 +316,25 @@ const CONFIG = {
           const action = args?.[0];
           if (!action || !action.type) return;
 
+          // Chat freezing functionality
+          if (CONFIG.features.chatFreezing) {
+            // Block MESSAGE_CREATE for frozen channels
+            if (action.type === 'MESSAGE_CREATE' || action.type === 'MESSAGE_UPDATE') {
+              const channelId = action.channelId || action.message?.channel_id;
+              if (channelId && shouldFreezeChannel(channelId)) {
+                // Block the message from being processed
+                return null;
+              }
+            }
+
+            // Block message loads for frozen channels
+            if (action.type === 'LOAD_MESSAGES_SUCCESS' && shouldFreezeChannel(action.channelId)) {
+              // Prevent new messages from loading into frozen channels
+              return null;
+            }
+          }
+
+          // Original dispatcher functionality
           if (action.type === "MESSAGE_CREATE" || action.type === "MESSAGE_UPDATE") {
             const msg = action.message || action.messageRecord;
             if (!msg) return;
@@ -310,6 +358,29 @@ const CONFIG = {
         } catch {}
       });
     } catch {}
+  }
+
+  // Patch message sending to block for frozen channels
+  async function patchMessageSending() {
+    if (!CONFIG.features.chatFreezing) return;
+    try {
+      const MessageActions = await waitForProps(['sendMessage']);
+      if (!MessageActions) return;
+      
+      patcher.before(MessageActions, 'sendMessage', (args) => {
+        try {
+          const channelId = args[0];
+          if (channelId && shouldFreezeChannel(channelId)) {
+            api.showToast('Cannot send messages in frozen chat');
+            throw new Error('Chat is frozen - cannot send messages');
+          }
+        } catch (error) {
+          console.error('Message send block error:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to patch message sending:', error);
+    }
   }
 
   // DM helper + message actions
@@ -536,6 +607,22 @@ const CONFIG = {
         api.showToast("Cleared all persistent messages");
       }
     },
+    // Chat freezing controls
+    freezeChat: (id) => {
+      if (!CONFIG.frozenChats.includes(id)) {
+        CONFIG.frozenChats.push(id);
+        api.showToast(`Chat ${id} frozen`);
+      }
+    },
+    unfreezeChat: (id) => {
+      const index = CONFIG.frozenChats.indexOf(id);
+      if (index > -1) {
+        CONFIG.frozenChats.splice(index, 1);
+        api.showToast(`Chat ${id} unfrozen`);
+      }
+    },
+    getFrozenChats: () => [...CONFIG.frozenChats],
+    isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
     quick() {
       const q = CONFIG.quick || {};
       const payload = {
@@ -560,16 +647,20 @@ const CONFIG = {
       patcher = P?.create?.("idplus-full") || null;
       if (!patcher) { api.showToast("IDPlus: patcher missing"); return; }
 
+      // Get required stores for chat freezing
+      ChannelStore = await waitForProps(['getChannel', 'getDMFromUserId']);
+
       await patchClipboard();
       await patchLinkBuilders();
       await patchDispatcher();
+      await patchMessageSending();
 
       // Start auto fake messages if enabled
       if (CONFIG.features.autoFakeMessages) {
         sendAutoFakeMessages();
       }
 
-      api.showToast("IDPlus: full features active (persistent messages)");
+      api.showToast("IDPlus: full features active (persistent messages + chat freezing)");
     } catch (e) {
       api.showToast("IDPlus: failed to start");
     }
