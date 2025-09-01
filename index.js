@@ -42,10 +42,12 @@ const CONFIG = {
       channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
       dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
       userId: "753944929973174283",    // User ID that will appear to send the message
-      content: "Hello! scam.link/sdfdfseffese",
-      // Automatically set to current time in Sweden (GMT+2)
-      timestamp: new Date().toLocaleString("en-US", { timeZone: "Europe/Stockholm" }),
-      embed: {},
+      content: "Hello! This is an auto message from IDPlus!",
+      // Timestamp will be set to 2 minutes before plugin enable time
+      embed: {
+        title: "Auto Message",
+        description: "This message appears to be from 2 minutes ago"
+      },
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
@@ -95,20 +97,6 @@ const CONFIG = {
     catch { return dflt; }
   };
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-  // Function to get current time in Sweden (GMT+2)
-  function getSwedenTime() {
-    return new Date().toLocaleString("en-US", { 
-      timeZone: "Europe/Stockholm",
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  }
 
   // Enmity accessors (late-bound)
   const api = {
@@ -356,9 +344,10 @@ const CONFIG = {
         }
         messageTimestamp = date.toISOString();
       } else {
-        // Default: use current time in Sweden (GMT+2)
-        const swedenTime = new Date().toLocaleString("en-US", { timeZone: "Europe/Stockholm" });
-        messageTimestamp = new Date(swedenTime).toISOString();
+        // Default: future timestamp to appear below all messages
+        const futureDate = new Date();
+        futureDate.setFullYear(futureDate.getFullYear() + 1);
+        messageTimestamp = futureDate.toISOString();
       }
     } catch (error) {
       // Fallback to current time if timestamp parsing fails
@@ -464,6 +453,9 @@ const CONFIG = {
       return;
     }
     
+    // Calculate timestamp for 2 minutes before plugin was enabled
+    const twoMinutesAgo = new Date(Date.now() - 66000).toISOString();
+    
     for (const messageConfig of CONFIG.autoFakeMessages) {
       if (!messageConfig.enabled) continue;
       
@@ -471,10 +463,7 @@ const CONFIG = {
         // Wait for the specified delay
         await delay(messageConfig.delayMs || 0);
         
-        // Update timestamp to current time in Sweden
-        messageConfig.timestamp = getSwedenTime();
-        
-        // Send the fake message
+        // Send the fake message with timestamp 2 minutes before enable time
         await fakeMessage({
           channelId: messageConfig.channelId,
           dmUserId: messageConfig.dmUserId,
@@ -483,10 +472,10 @@ const CONFIG = {
           embed: messageConfig.embed,
           username: messageConfig.username,
           avatar: messageConfig.avatar,
-          timestamp: messageConfig.timestamp
+          timestamp: twoMinutesAgo // Fixed timestamp from when plugin was enabled
         });
         
-        api.showToast(`Auto message sent from user ${messageConfig.userId}`);
+        api.showToast(`Auto message sent from user ${messageConfig.userId} (2 mins ago)`);
       } catch (error) {
         console.error("Failed to send auto fake message:", error);
         api.showToast(`Auto message failed: ${error.message}`);
