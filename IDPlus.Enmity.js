@@ -8,6 +8,7 @@
  *  - Link builder remap (guild/channel/message/user in generated links)
  *  - DM helper + injectMessage + sendMessage (with embed)
  *  - Fake messages from other users (manual + auto on startup)
+ *  - Persistent fake messages that survive Discord updates/refreshes
  *
  * Safety:
  *  - No Enmity UI usage (no settings screen, no Form components)
@@ -28,7 +29,8 @@ const CONFIG = {
     clipboard:   true,
     dispatcher:  true,
     linkBuilders:true,
-    autoFakeMessages: true  // Send fake messages automatically on startup
+    autoFakeMessages: true,  // Send fake messages automatically on startup
+    persistentMessages: true // Keep fake messages persistent across refreshes
   },
 
   // Delay (ms) before patching to ensure modules are loaded
@@ -42,8 +44,7 @@ const CONFIG = {
       channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
       dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
       userId: "753944929973174283",    // User ID that will appear to send the message
-      content: "Hello! This is an auto message from IDPlus!",
-      // Timestamp will be set to 2 minutes before plugin enable time
+      content: "Hellos! this is a scam!",
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
@@ -104,6 +105,9 @@ const CONFIG = {
     toasts()          { return get(window, "enmity.modules.common.Toasts", null); },
     showToast(msg)    { try { this.toasts()?.open?.({ content: String(msg), source: "ic_warning_24px" }); } catch {} }
   };
+
+  // Store persistent fake messages
+  const persistentFakeMessages = new Map();
 
   // Map helpers
   const SNOWFLAKE_RE = /^\d{17,21}$/;
@@ -295,6 +299,13 @@ const CONFIG = {
               rewriteAuthor(m.author);
               rewriteMessageObject(m);
             }
+            
+            // Reinject persistent fake messages when messages are loaded
+            if (CONFIG.features.persistentMessages) {
+              setTimeout(() => {
+                reinjectPersistentMessages(action.channelId);
+              }, 100);
+            }
           }
         } catch {}
       });
@@ -324,14 +335,24 @@ const CONFIG = {
     return UserStore?.getUser?.(userId);
   }
   
+  // Reinject persistent fake messages when messages are loaded
+  async function reinjectPersistentMessages(channelId) {
+    if (!persistentFakeMessages.has(channelId)) return;
+    
+    const messages = persistentFakeMessages.get(channelId);
+    const MessageActions = await waitForProps(["receiveMessage"]);
+    
+    for (const fakeMessage of messages) {
+      try {
+        MessageActions?.receiveMessage?.(channelId, {...fakeMessage});
+      } catch (error) {
+        console.error("Failed to reinject persistent message:", error);
+      }
+    }
+  }
+  
   // Create a fake message that appears to be from another user
-
-
-
-
-
-  // Create a fake message that appears to be from another user
-  async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp }) {
+  async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
     const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
     const target = await normalizeTarget({ channelId, dmUserId });
     
@@ -372,9 +393,9 @@ const CONFIG = {
       url: embed.url || undefined,
       thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
     }] : [];
-  
+
     const fake = {
-      id: String(Date.now() + Math.floor(Math.random() * 1000)),
+      id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
       type: 0,
       content: String(content ?? ""),
       channel_id: target,
@@ -386,7 +407,7 @@ const CONFIG = {
         global_name: userInfo?.global_name,
         bot: userInfo?.bot || false
       },
-      embeds, // This will be empty array if no embed is provided
+      embeds,
       timestamp: messageTimestamp,
       edited_timestamp: null,
       flags: 0,
@@ -398,9 +419,19 @@ const CONFIG = {
     };
     
     MessageActions?.receiveMessage?.(target, fake);
-    api.showToast("Fake message injected (persistent bottom)");
+    
+    // Store for persistence if enabled
+    if (persistent && CONFIG.features.persistentMessages) {
+      if (!persistentFakeMessages.has(target)) {
+        persistentFakeMessages.set(target, []);
+      }
+      persistentFakeMessages.get(target).push(fake);
+    }
+    
+    api.showToast("Fake message injected (persistent)");
     return fake;
   }
+  
   async function injectMessage({ channelId, dmUserId, content, embed }) {
     const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
     const target = await normalizeTarget({ channelId, dmUserId });
@@ -456,8 +487,10 @@ const CONFIG = {
       return;
     }
     
-    // Calculate timestamp for 2 minutes before plugin was enabled
-    const twoMinutesAgo = new Date(Date.now() - 66000).toISOString();
+    // Use a fixed future timestamp that will always stay at the bottom
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 10); // 10 years in the future
+    const futureTimestamp = futureDate.toISOString();
     
     for (const messageConfig of CONFIG.autoFakeMessages) {
       if (!messageConfig.enabled) continue;
@@ -466,7 +499,7 @@ const CONFIG = {
         // Wait for the specified delay
         await delay(messageConfig.delayMs || 0);
         
-        // Send the fake message with timestamp 2 minutes before enable time
+        // Send the fake message with future timestamp to stay at bottom
         await fakeMessage({
           channelId: messageConfig.channelId,
           dmUserId: messageConfig.dmUserId,
@@ -475,10 +508,11 @@ const CONFIG = {
           embed: messageConfig.embed,
           username: messageConfig.username,
           avatar: messageConfig.avatar,
-          timestamp: twoMinutesAgo // Fixed timestamp from when plugin was enabled
+          timestamp: futureTimestamp, // Fixed future timestamp to stay at bottom
+          persistent: true // Make it persistent
         });
         
-        api.showToast(`Auto message sent from user ${messageConfig.userId} (2 mins ago)`);
+        api.showToast(`Auto message sent from user ${messageConfig.userId} (persistent)`);
       } catch (error) {
         console.error("Failed to send auto fake message:", error);
         api.showToast(`Auto message failed: ${error.message}`);
@@ -493,6 +527,15 @@ const CONFIG = {
     fakeMessage,
     getUserInfo,
     sendAutoFakeMessages,
+    clearPersistentMessages(channelId) {
+      if (channelId) {
+        persistentFakeMessages.delete(channelId);
+        api.showToast(`Cleared persistent messages for channel ${channelId}`);
+      } else {
+        persistentFakeMessages.clear();
+        api.showToast("Cleared all persistent messages");
+      }
+    },
     quick() {
       const q = CONFIG.quick || {};
       const payload = {
@@ -526,7 +569,7 @@ const CONFIG = {
         sendAutoFakeMessages();
       }
 
-      api.showToast("IDPlus: full features active");
+      api.showToast("IDPlus: full features active (persistent messages)");
     } catch (e) {
       api.showToast("IDPlus: failed to start");
     }
@@ -535,7 +578,8 @@ const CONFIG = {
   function onStop() {
     try { patcher?.unpatchAll?.(); } catch {}
     patcher = null;
-    api.showToast("IDPlus: stopped");
+    persistentFakeMessages.clear();
+    api.showToast("IDPlus: stopped (persistent messages cleared)");
   }
 
   // Register (prefer Enmity register; fallback CommonJS export)
