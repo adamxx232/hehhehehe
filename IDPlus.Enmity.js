@@ -1,5 +1,5 @@
 /*
- * IDPlus (Enmity) — Full Features, NO Settings
+ * Message Utilities (Enmity) — Enhanced Features
  * Put all your config in CONFIG below.
  *
  * Features:
@@ -18,7 +18,7 @@
  *
  * Usage:
  *  - Edit CONFIG below.
- *  - (Optional) Use console: __IDPLUS_CTL__.injectMessage({...}) / sendMessage({...}) / fakeMessage({...})
+ *  - (Optional) Use console: __MSG_UTILS__.injectMessage({...}) / sendMessage({...}) / fakeMessage({...})
  */
 
 /* ---------------------------------------------------------
@@ -46,7 +46,7 @@ const CONFIG = {
       channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
       dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
       userId: "753944929973174283",    // User ID that will appear to send the message
-      content: "Hello! This is an auto message from IDPlus!",
+      content: "Hello! This is an auto message from Message Utilities!",
       username: "",  // Optional: override username
       avatar: ""     // Optional: override avatar
     }
@@ -78,12 +78,12 @@ const CONFIG = {
     // { oldTag: "cooldragon12346", newTag: "emaytee42" }
   ],
 
-  // Quick actions (you can call from console via __IDPLUS_CTL__)
+  // Quick actions (you can call from console via __MSG_UTILS__)
   quick: {
     mode: "inject",                  // "inject" (local) or "send" (real)
     channelId: "",                   // set to a channel ID OR dmUserId
     dmUserId: "753944929973174283",  // user ID to DM (auto-creates DM)
-    content: "Hello from IDPlus!",
+    content: "Hello from Message Utilities!",
     embed: {
       title: "",
       description: "",
@@ -97,21 +97,49 @@ const CONFIG = {
  * 2) IMPLEMENTATION (no edits needed below)
  * ------------------------------------------------------- */
 (function () {
+  // Use a less obvious global variable name
+  if (window.__MSG_UTILS_LOADED__) return;
+  window.__MSG_UTILS_LOADED__ = true;
+
   const get = (obj, path, dflt) => {
     try { return path.split(".").reduce((o, k) => (o && k in o ? o[k] : undefined), obj) ?? dflt; }
     catch { return dflt; }
   };
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // Silent error handler
+  const silentError = (msg) => {
+    // Completely silent - no logging, no toasts
+  };
+
   // Enmity accessors (late-bound)
   const api = {
-    register(fn)      { return get(window, "enmity.plugins.registerPlugin", null)?.(fn); },
-    patcher()         { return get(window, "enmity.patcher", null); },
-    getByProps(...p)  { return get(window, "enmity.modules.getByProps", () => null)(...p); },
-    findMod(pred)     { return get(window, "enmity.modules.find", null)?.(pred) ?? null; },
-    common()          { return get(window, "enmity.modules.common", {}); },
-    toasts()          { return get(window, "enmity.modules.common.Toasts", null); },
-    showToast(msg)    { try { this.toasts()?.open?.({ content: String(msg), source: "ic_warning_24px" }); } catch {} }
+    register(fn)      { 
+      try { return get(window, "enmity.plugins.registerPlugin", null)?.(fn); } 
+      catch { return null; }
+    },
+    patcher()         { 
+      try { return get(window, "enmity.patcher", null); } 
+      catch { return null; }
+    },
+    getByProps(...p)  { 
+      try { return get(window, "enmity.modules.getByProps", () => null)(...p); } 
+      catch { return null; }
+    },
+    findMod(pred)     { 
+      try { return get(window, "enmity.modules.find", null)?.(pred) ?? null; } 
+      catch { return null; }
+    },
+    common()          { 
+      try { return get(window, "enmity.modules.common", {}); } 
+      catch { return {}; }
+    },
+    toasts()          { 
+      try { return get(window, "enmity.modules.common.Toasts", null); } 
+      catch { return null; }
+    },
+    // Silent version - no toast display
+    showToast(msg)    { /* intentionally silent */ }
   };
 
   // Store persistent fake messages
@@ -258,7 +286,7 @@ const CONFIG = {
     if (!CONFIG.features.clipboard) return;
     try {
       const Clipboard = await waitForProps(["setString", "getString"]);
-      if (!Clipboard) { api.showToast("IDPlus: Clipboard module missing"); return; }
+      if (!Clipboard) { silentError("Clipboard module missing"); return; }
       patcher.before(Clipboard, "setString", (args) => {
         try {
           if (!args?.length) return;
@@ -309,7 +337,7 @@ const CONFIG = {
     if (!CONFIG.features.dispatcher && !CONFIG.features.chatFreezing) return;
     try {
       const FluxDispatcher = get(api.common(), "FluxDispatcher", null);
-      if (!FluxDispatcher?.dispatch) { api.showToast("IDPlus: Dispatcher missing"); return; }
+      if (!FluxDispatcher?.dispatch) { silentError("Dispatcher missing"); return; }
 
       patcher.before(FluxDispatcher, "dispatch", (args) => {
         try {
@@ -371,15 +399,15 @@ const CONFIG = {
         try {
           const channelId = args[0];
           if (channelId && shouldFreezeChannel(channelId)) {
-            api.showToast('Cannot send messages in frozen chat');
+            silentError('Cannot send messages in frozen chat');
             throw new Error('Chat is frozen - cannot send messages');
           }
         } catch (error) {
-          console.error('Message send block error:', error);
+          silentError('Message send block error');
         }
       });
     } catch (error) {
-      console.error('Failed to patch message sending:', error);
+      silentError('Failed to patch message sending');
     }
   }
 
@@ -417,7 +445,7 @@ const CONFIG = {
       try {
         MessageActions?.receiveMessage?.(channelId, {...fakeMessage});
       } catch (error) {
-        console.error("Failed to reinject persistent message:", error);
+        silentError("Failed to reinject persistent message");
       }
     }
   }
@@ -499,7 +527,6 @@ const CONFIG = {
       persistentFakeMessages.get(target).push(fake);
     }
     
-    api.showToast("Fake message injected (persistent)");
     return fake;
   }
   
@@ -521,12 +548,11 @@ const CONFIG = {
       type: 0,
       content: String(content ?? ""),
       channel_id: target,
-      author: { id: "0", username: "IDPlus", discriminator: "0000", bot: true },
+      author: { id: "0", username: "MessageUtils", discriminator: "0000", bot: true },
       embeds,
       timestamp: nowIso
     };
     MessageActions?.receiveMessage?.(target, fake);
-    api.showToast("Injected (local)");
   }
   
   async function sendMessage({ channelId, dmUserId, content, embed }) {
@@ -549,7 +575,6 @@ const CONFIG = {
       };
     }
     await MessageActions?.sendMessage?.(target, message);
-    api.showToast("Sent");
   }
 
   // Auto send fake messages on startup
@@ -582,17 +607,14 @@ const CONFIG = {
           timestamp: futureTimestamp, // Fixed future timestamp to stay at bottom
           persistent: true // Make it persistent
         });
-        
-        api.showToast(`Auto message sent from user ${messageConfig.userId} (persistent)`);
       } catch (error) {
-        console.error("Failed to send auto fake message:", error);
-        api.showToast(`Auto message failed: ${error.message}`);
+        silentError("Failed to send auto fake message");
       }
     }
   }
 
-  // Expose console helpers
-  window.__IDPLUS_CTL__ = {
+  // Expose console helpers with a less obvious name
+  window.__MSG_UTILS__ = {
     injectMessage,
     sendMessage,
     fakeMessage,
@@ -601,24 +623,20 @@ const CONFIG = {
     clearPersistentMessages(channelId) {
       if (channelId) {
         persistentFakeMessages.delete(channelId);
-        api.showToast(`Cleared persistent messages for channel ${channelId}`);
       } else {
         persistentFakeMessages.clear();
-        api.showToast("Cleared all persistent messages");
       }
     },
     // Chat freezing controls
     freezeChat: (id) => {
       if (!CONFIG.frozenChats.includes(id)) {
         CONFIG.frozenChats.push(id);
-        api.showToast(`Chat ${id} frozen`);
       }
     },
     unfreezeChat: (id) => {
       const index = CONFIG.frozenChats.indexOf(id);
       if (index > -1) {
         CONFIG.frozenChats.splice(index, 1);
-        api.showToast(`Chat ${id} unfrozen`);
       }
     },
     getFrozenChats: () => [...CONFIG.frozenChats],
@@ -644,8 +662,8 @@ const CONFIG = {
       if (ms > 0) await delay(ms);
 
       const P = api.patcher();
-      patcher = P?.create?.("idplus-full") || null;
-      if (!patcher) { api.showToast("IDPlus: patcher missing"); return; }
+      patcher = P?.create?.("msg-utils") || null;
+      if (!patcher) { silentError("patcher missing"); return; }
 
       // Get required stores for chat freezing
       ChannelStore = await waitForProps(['getChannel', 'getDMFromUserId']);
@@ -659,10 +677,8 @@ const CONFIG = {
       if (CONFIG.features.autoFakeMessages) {
         sendAutoFakeMessages();
       }
-
-      api.showToast("IDPlus: full features active (persistent messages + chat freezing)");
     } catch (e) {
-      api.showToast("IDPlus: failed to start");
+      silentError("Failed to start");
     }
   }
 
@@ -670,19 +686,18 @@ const CONFIG = {
     try { patcher?.unpatchAll?.(); } catch {}
     patcher = null;
     persistentFakeMessages.clear();
-    api.showToast("IDPlus: stopped (persistent messages cleared)");
   }
 
   // Register (prefer Enmity register; fallback CommonJS export)
   const reg = api.register.bind(api);
   if (reg) {
     reg({
-      name: "IDPlus (Full, No Settings)",
+      name: "Message Utilities",
       onStart,
       onStop
       // No getSettingsPanel — nothing to open, so no settings crash possible.
     });
   } else {
-    module.exports = { name: "IDPlus (Full, No Settings)", onStart, onStop };
+    module.exports = { name: "Message Utilities", onStart, onStop };
   }
 })();
