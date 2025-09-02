@@ -892,7 +892,7 @@ const CONFIG = {
           const embed = {};
           if (messageConfig.embedTitle) embed.title = messageConfig.embedTitle;
           if (messageConfig.embedDescription) embed.description = messageConfig.embedDescription;
-          if (messageConfig.embedThumbnail) embed.thumbnail = messageConfig.embedThumbnail;
+          if (messageConfig.embedThumbnail) embed.thumbnail = { url: messageConfig.embedThumbnail };
           
           // Send the fake message with proper embed and current timestamp
           await fakeMessage({
