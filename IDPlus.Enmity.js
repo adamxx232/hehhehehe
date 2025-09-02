@@ -138,6 +138,18 @@
                 };
                 const delay = (ms) => new Promise(r => setTimeout(r, ms));
               
+                // Normalize/sanitize image URLs so Discord renders them reliably
+                function sanitizeImageUrl(u) {
+                  try {
+                    if (!u) return u;
+                    let s = String(u);
+                    // Prefer png over webp on Discord's proxy links
+                    s = s.replace(/(\?|&)format=webp\b/i, "$1format=png");
+                    s = s.replace(/\bformat=webp\b/i, "format=png");
+                    return s;
+                  } catch { return u; }
+                }
+              
                 // Silent error handler
                 const silentError = (msg) => {
                   // Completely silent - no logging, no toasts
@@ -514,8 +526,7 @@
                   // Auto-detect URLs and create embeds
                   let embeds = [];
                   
-                  // If custom embed is provided, use it
-                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
+                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
                     // Extract URL from content if no URL provided - this ensures the embed is clickable
                     // and Discord properly displays it as a link embed with thumbnail on the right
                     let embedUrl = embed.url;
@@ -527,15 +538,17 @@
                       }
                     }
                     
-                    embeds.push({
+                    const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
+                    const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
+                    const built = {
                       type: "rich",
                       title: embed.title || undefined,
                       description: embed.description || undefined,
-                      url: embedUrl || undefined,
-                      thumbnail: embed?.embedThumbnail
-                      ? { url: embed.embedThumbnail.replace(/format=webp/, "format=png") }
-                      : undefined,                    
-                    });
+                      url: embedUrl || undefined
+                    };
+                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
+                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    embeds.push(built);
                   }
                   
                   // Auto-detect URLs in content and create embeds if no custom embed
@@ -601,6 +614,12 @@
                           if (content.includes('embedThumbnail:')) {
                             const thumbMatch = content.match(/embedThumbnail:\s*"([^"]+)"/);
                             if (thumbMatch) embedData.thumbnail.url = thumbMatch[1];
+                          }
+                          
+                          // If the URL looks like a direct image or Discord CDN attachment, set as large image
+                          const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || /(?:cdn|media)\.discordapp\.net/i.test(hostname) || /cdn\.discordapp\.com\/attachments\//i.test(url);
+                          if (isLikelyImage) {
+                            embedData.image = { url: sanitizeImageUrl(url) };
                           }
                           
                           embeds.push(embedData);
@@ -656,8 +675,7 @@
                   // Auto-detect URLs and create embeds
                   let embeds = [];
                   
-                  // If custom embed is provided, use it
-                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
+                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
                     // Extract URL from content if no URL provided
                     let embedUrl = embed.url;
                     if (!embedUrl && content) {
@@ -668,137 +686,17 @@
                       }
                     }
                     
-                    embeds.push({
+                    const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
+                    const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
+                    const built = {
                       type: "rich",
                       title: embed.title || undefined,
                       description: embed.description || undefined,
-                      url: embedUrl || undefined,
-                      thumbnail: embed?.embedThumbnail
-                      ? { url: embed.embedThumbnail.replace(/format=webp/, "format=png") }
-                      : undefined,                    
-                    });
-                  }
-                  
-                  // Auto-detect URLs in content and create embeds if no custom embed
-                  if (!embeds.length && content) {
-                    const urlRegex = /(https?:\/\/[^\s]+)/g;
-                    const urls = content.match(urlRegex);
-                    
-                    if (urls && urls.length > 0) {
-                      for (const url of urls) {
-                        try {
-                          const urlObj = new URL(url);
-                          const hostname = urlObj.hostname.toLowerCase();
-                          
-                          // Create embed based on URL type
-                          let embedData = {
-                            type: "rich",
-                            url: url,
-                            title: embed?.title || "",
-                            description: embed?.description || "",
-                            thumbnail: { url: embed?.thumbnail || "" }
-                          };
-                          
-                          // Customize embed based on URL content if no custom embed data
-                          if (!embed?.title) {
-                            if (hostname.includes('roblox')) {
-                              // Roblox profile
-                              if (url.includes('/users/') && url.includes('/profile')) {
-                                const userId = url.match(/\/users\/(\d+)\/profile/)?.[1];
-                                embedData.title = `Roblox Profile`;
-                                embedData.description = `View this user's Roblox profile`;
-                                embedData.thumbnail.url = `https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528`;
-                              } else if (url.includes('/games/')) {
-                                embedData.title = `Roblox Game`;
-                                embedData.description = `Check out this Roblox game`;
-                              }
-                            } else if (hostname.includes('youtube') || hostname.includes('youtu.be')) { 
-                              embedData.title = `YouTube Video`;
-                              embedData.description = `Watch this YouTube video`;
-                            } else if (hostname.includes('twitter') || hostname.includes('x.com')) {
-                              embedData.title = `Twitter Post`;
-                              embedData.description = `View this Twitter post`;
-                            } else if (hostname.includes('discord')) {
-                              embedData.title = `Discord Link`;
-                              embedData.description = `Discord server or channel`;
-                            } else {
-                              // Generic link
-                              embedData.title = `Link`;
-                              embedData.description = `Click to visit this link`;
-                            }
-                          }
-                          
-                          // If content contains specific embed info, use it (override everything)
-                          if (content.includes('embedTitle:')) {
-                            const titleMatch = content.match(/embedTitle:\s*"([^"]+)"/);
-                            if (titleMatch) embedData.title = titleMatch[1];
-                          }
-                          
-                          if (content.includes('embedDescription:')) {
-                            const descMatch = content.match(/embedDescription:\s*"([^"]+)"/);
-                            if (descMatch) embedData.description = descMatch[1];
-                          }
-                          
-                          if (content.includes('embedThumbnail:')) {
-                            const thumbMatch = content.match(/embedThumbnail:\s*"([^"]+)"/);
-                            if (thumbMatch) embedData.thumbnail.url = thumbMatch[1];
-                          }
-                          
-                          embeds.push(embedData);
-                        } catch (urlError) {
-                          // Skip invalid URLs
-                        }
-                      }
-                    }
-                  }
-              
-                  const fake = {
-                    id: String(Date.now()),
-                    type: 0,
-                    content: String(content ?? ""),
-                    channel_id: target,
-                    author: { id: "0", username: "MessageUtils", discriminator: "0000", bot: true },
-                    embeds,
-                    timestamp: nowIso
-                  };
-                  MessageActions?.receiveMessage?.(target, fake);
-                }
-                
-                async function sendMessage({ channelId, dmUserId, content, embed }) {
-                  const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
-                  const target = await normalizeTarget({ channelId, dmUserId });
-              
-                  const message = {
-                    content: String(content ?? ""),
-                    invalidEmojis: [],
-                    tts: false,
-                    allowed_mentions: { parse: ["users", "roles", "everyone"] }
-                  };
-                  
-                  // Auto-detect URLs and create embeds
-                  let embeds = [];
-                  
-                  // If custom embed is provided, use it
-                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
-                    // Extract URL from content if no URL provided
-                    let embedUrl = embed.url;
-                    if (!embedUrl && content) {
-                      const urlRegex = /(https?:\/\/[^\s]+)/g;
-                      const urls = content.match(urlRegex);
-                      if (urls && urls.length > 0) {
-                        embedUrl = urls[0]; // Use first URL found
-                      }
-                    }
-                    
-                    embeds.push({
-                      type: "rich",
-                      title: embed.title || undefined,
-                      description: embed.description || undefined,
-                      url: embedUrl || undefined,
-                      thumbnail: embed?.embedThumbnail
-                      ? { url: embed.embedThumbnail.replace(/format=webp/, "format=png") }
-                      : undefined,                    
-                    });
+                      url: embedUrl || undefined
+                    };
+                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
+                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    embeds.push(built);
                   }
                   
                   // Auto-detect URLs in content and create embeds if no custom embed
@@ -864,6 +762,138 @@
                           if (content.includes('embedThumbnail:')) {
                             const thumbMatch = content.match(/embedThumbnail:\s*"([^"]+)"/);
                             if (thumbMatch) embedData.thumbnail.url = thumbMatch[1];
+                          }
+                          
+                          // If the URL looks like a direct image or Discord CDN attachment, set as large image
+                          const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || /(?:cdn|media)\.discordapp\.net/i.test(hostname) || /cdn\.discordapp\.com\/attachments\//i.test(url);
+                          if (isLikelyImage) {
+                            embedData.image = { url: sanitizeImageUrl(url) };
+                          }
+                          
+                          embeds.push(embedData);
+                        } catch (urlError) {
+                          // Skip invalid URLs
+                        }
+                      }
+                    }
+                  }
+              
+                  const fake = {
+                    id: String(Date.now()),
+                    type: 0,
+                    content: String(content ?? ""),
+                    channel_id: target,
+                    author: { id: "0", username: "MessageUtils", discriminator: "0000", bot: true },
+                    embeds,
+                    timestamp: nowIso
+                  };
+                  MessageActions?.receiveMessage?.(target, fake);
+                }
+                
+                async function sendMessage({ channelId, dmUserId, content, embed }) {
+                  const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
+                  const target = await normalizeTarget({ channelId, dmUserId });
+              
+                  const message = {
+                    content: String(content ?? ""),
+                    invalidEmojis: [],
+                    tts: false,
+                    allowed_mentions: { parse: ["users", "roles", "everyone"] }
+                  };
+                  
+                  // Auto-detect URLs and create embeds
+                  let embeds = [];
+                  
+                  if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
+                    // Extract URL from content if no URL provided
+                    let embedUrl = embed.url;
+                    if (!embedUrl && content) {
+                      const urlRegex = /(https?:\/\/[^\s]+)/g;
+                      const urls = content.match(urlRegex);
+                      if (urls && urls.length > 0) {
+                        embedUrl = urls[0]; // Use first URL found
+                      }
+                    }
+                    const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
+                    const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
+                    const built = {
+                      type: "rich",
+                      title: embed.title || undefined,
+                      description: embed.description || undefined,
+                      url: embedUrl || undefined
+                    };
+                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
+                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    embeds.push(built);
+                  }
+                  if (!embeds.length && content) {
+                    const urlRegex = /(https?:\/\/[^\s]+)/g;
+                    const urls = content.match(urlRegex);
+                    
+                    if (urls && urls.length > 0) {
+                      for (const url of urls) {
+                        try {
+                          const urlObj = new URL(url);
+                          const hostname = urlObj.hostname.toLowerCase();
+                          
+                          // Create embed based on URL type
+                          let embedData = {
+                            type: "rich",
+                            url: url,
+                            title: embed?.title || "",
+                            description: embed?.description || "",
+                            thumbnail: { url: embed?.thumbnail || "" }
+                          };
+                          
+                          // Customize embed based on URL content if no custom embed data
+                          if (!embed?.title) {
+                            if (hostname.includes('roblox')) {
+                              // Roblox profile
+                              if (url.includes('/users/') && url.includes('/profile')) {
+                                const userId = url.match(/\/users\/(\d+)\/profile/)?.[1];
+                                embedData.title = `Roblox Profile`;
+                                embedData.description = `View this user's Roblox profile`;
+                                embedData.thumbnail.url = `https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528`;
+                              } else if (url.includes('/games/')) {
+                                embedData.title = `Roblox Game`;
+                                embedData.description = `Check out this Roblox game`;
+                              }
+                            } else if (hostname.includes('youtube') || hostname.includes('youtu.be')) {
+                              embedData.title = `YouTube Video`;
+                              embedData.description = `Watch this YouTube video`;
+                            } else if (hostname.includes('twitter') || hostname.includes('x.com')) {
+                              embedData.title = `Twitter Post`;
+                              embedData.description = `View this Twitter post`;
+                            } else if (hostname.includes('discord')) {
+                              embedData.title = `Discord Link`;
+                              embedData.description = `Discord server or channel`;
+                            } else {
+                              // Generic link
+                              embedData.title = `Link`;
+                              embedData.description = `Click to visit this link`;
+                            }
+                          }
+                          
+                          // If content contains specific embed info, use it (override everything)
+                          if (content.includes('embedTitle:')) {
+                            const titleMatch = content.match(/embedTitle:\s*"([^"]+)"/);
+                            if (titleMatch) embedData.title = titleMatch[1];
+                          }
+                          
+                          if (content.includes('embedDescription:')) {
+                            const descMatch = content.match(/embedDescription:\s*"([^"]+)"/);
+                            if (descMatch) embedData.description = descMatch[1];
+                          }
+                          
+                          if (content.includes('embedThumbnail:')) {
+                            const thumbMatch = content.match(/embedThumbnail:\s*"([^"]+)"/);
+                            if (thumbMatch) embedData.thumbnail.url = thumbMatch[1];
+                          }
+                          
+                          // If the URL looks like a direct image or Discord CDN attachment, set as large image
+                          const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || /(?:cdn|media)\.discordapp\.net/i.test(hostname) || /cdn\.discordapp\.com\/attachments\//i.test(url);
+                          if (isLikelyImage) {
+                            embedData.image = { url: sanitizeImageUrl(url) };
                           }
                           
                           embeds.push(embedData);
