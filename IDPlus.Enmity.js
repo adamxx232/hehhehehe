@@ -532,7 +532,7 @@ const CONFIG = {
           title: embed.title || undefined,
           description: embed.description || undefined,
           url: embedUrl || undefined,
-          thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
+          image: embed.thumbnail ? { url: embed.thumbnail } : undefined // FIXED
         });
       }
       
@@ -671,7 +671,7 @@ const CONFIG = {
           title: embed.title || undefined,
           description: embed.description || undefined,
           url: embedUrl || undefined,
-          thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
+          image: embed.thumbnail ? { url: embed.thumbnail } : undefined // FIXED
         });
       }
       
@@ -791,7 +791,7 @@ const CONFIG = {
           title: embed.title || undefined,
           description: embed.description || undefined,
           url: embedUrl || undefined,
-          thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
+          image: embed.thumbnail ? { url: embed.thumbnail } : undefined // FIXED
         });
       }
       
