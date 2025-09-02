@@ -553,7 +553,7 @@ const CONFIG = {
                 url: url,
                 title: embed?.title || "",
                 description: embed?.description || "",
-                thumbnail: { url: embed?.thumbnail || "" }
+                image: { url: embed?.thumbnail || "" }
               };
               
               // Customize embed based on URL content if no custom embed data
@@ -692,7 +692,7 @@ const CONFIG = {
                 url: url,
                 title: embed?.title || "",
                 description: embed?.description || "",
-                thumbnail: { url: embed?.thumbnail || "" }
+                image: { url: embed?.thumbnail || "" }
               };
               
               // Customize embed based on URL content if no custom embed data
@@ -812,7 +812,7 @@ const CONFIG = {
                 url: url,
                 title: embed?.title || "",
                 description: embed?.description || "",
-                thumbnail: { url: embed?.thumbnail || "" }
+                image: { url: embed?.thumbnail || "" }
               };
               
               // Customize embed based on URL content if no custom embed data
