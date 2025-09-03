@@ -143,9 +143,17 @@
                 try {
                   if (!u) return u;
                   let s = String(u);
-                  // Prefer png over webp on Discord's proxy links
+                  
+                  // For Discord CDN links, try to preserve original format if possible
+                  if (s.includes('cdn.discordapp.net') || s.includes('media.discordapp.net')) {
+                    // Keep original format for Discord CDN links
+                    return s;
+                  }
+                  
+                  // For external links, prefer png over webp
                   s = s.replace(/(\?|&)format=webp\b/i, "$1format=png");
                   s = s.replace(/\bformat=webp\b/i, "format=png");
+                  
                   return s;
                 } catch { return u; }
               }
@@ -661,11 +669,17 @@
                           }
                           
                           // If the URL looks like a direct image or Discord CDN attachment, set as large image
-                          const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || /(?:cdn|media)\.discordapp\.net/i.test(hostname) || /cdn\.discordapp\.com\/attachments\//i.test(url);
+                          const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || 
+                                               /(?:cdn|media)\.discordapp\.net/i.test(hostname) || 
+                                               /cdn\.discordapp\.com\/attachments\//i.test(url) ||
+                                               /external\/.*\/https:\/\/.*\.(png|jpe?g|gif|webp)/i.test(url);
                           debugMessage(channelId, dmUserId, `URL ${url} is likely image: ${isLikelyImage}`);
                           if (isLikelyImage) {
-                            embedData.image = { url: sanitizeImageUrl(url) };
-                            debugMessage(channelId, dmUserId, `Set image URL: ${sanitizeImageUrl(url)}`);
+                            const sanitizedUrl = sanitizeImageUrl(url);
+                            debugMessage(channelId, dmUserId, `Original URL: ${url}`);
+                            debugMessage(channelId, dmUserId, `Sanitized URL: ${sanitizedUrl}`);
+                            embedData.image = { url: sanitizedUrl };
+                            debugMessage(channelId, dmUserId, `Set image URL: ${sanitizedUrl}`);
                           }
                           
                           debugMessage(channelId, dmUserId, `Final embed data: ${JSON.stringify(embedData)}`);
