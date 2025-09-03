@@ -138,19 +138,48 @@
                 };
                 const delay = (ms) => new Promise(r => setTimeout(r, ms));
               
-                // Normalize/sanitize image URLs so Discord renders them reliably
-                function sanitizeImageUrl(u) {
-                  try {
-                    if (!u) return u;
-                    let s = String(u);
-                    // Prefer png over webp on Discord's proxy links
-                    s = s.replace(/(\?|&)format=webp\b/i, "$1format=png");
-                    s = s.replace(/\bformat=webp\b/i, "format=png");
-                    return s;
-                  } catch { return u; }
-                }
+                              // Normalize/sanitize image URLs so Discord renders them reliably
+              function sanitizeImageUrl(u) {
+                try {
+                  if (!u) return u;
+                  let s = String(u);
+                  // Prefer png over webp on Discord's proxy links
+                  s = s.replace(/(\?|&)format=webp\b/i, "$1format=png");
+                  s = s.replace(/\bformat=webp\b/i, "format=png");
+                  return s;
+                } catch { return u; }
+              }
               
-                // Silent error handler
+              // Debug helper - sends debug info as actual messages
+              async function debugMessage(channelId, dmUserId, message) {
+                try {
+                  const MessageActions = await waitForProps(["receiveMessage"]);
+                  const target = await normalizeTarget({ channelId, dmUserId });
+                  
+                  const debugMsg = {
+                    id: `debug_${Date.now()}`,
+                    type: 0,
+                    content: `🔍 DEBUG: ${message}`,
+                    channel_id: target,
+                    author: { id: "0", username: "MessageUtils Debug", discriminator: "0000", bot: true },
+                    embeds: [],
+                    timestamp: new Date().toISOString(),
+                    edited_timestamp: null,
+                    flags: 0,
+                    mention_everyone: false,
+                    mention_roles: [],
+                    mentions: [],
+                    pinned: false,
+                    tts: false
+                  };
+                  
+                  MessageActions?.receiveMessage?.(target, debugMsg);
+                } catch (error) {
+                  // Silent fail for debug messages
+                }
+              }
+              
+              // Silent error handler
                 const silentError = (msg) => {
                   // Completely silent - no logging, no toasts
                 };
@@ -495,6 +524,8 @@
                 
                 // Create a fake message that appears to be from another user
                 async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
+                  debugMessage(channelId, dmUserId, `fakeMessage called with content: "${content}" and embed: ${JSON.stringify(embed)}`);
+                  
                   const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
                   const target = await normalizeTarget({ channelId, dmUserId });
                   
@@ -527,6 +558,8 @@
                   let embeds = [];
                   
                   if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
+                    debugMessage(channelId, dmUserId, `Custom embed provided: ${JSON.stringify(embed)}`);
+                    
                     // Extract URL from content if no URL provided - this ensures the embed is clickable
                     // and Discord properly displays it as a link embed with thumbnail on the right
                     let embedUrl = embed.url;
@@ -535,11 +568,16 @@
                       const urls = content.match(urlRegex);
                       if (urls && urls.length > 0) {
                         embedUrl = urls[0]; // Use first URL found
+                        debugMessage(channelId, dmUserId, `Extracted URL from content: ${embedUrl}`);
                       }
                     }
                     
                     const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
                     const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
+                    
+                    debugMessage(channelId, dmUserId, `Thumbnail URL: ${thumbUrl || 'none'}`);
+                    debugMessage(channelId, dmUserId, `Image URL: ${imageUrl || 'none'}`);
+                    
                     const built = {
                       type: "rich",
                       title: embed.title || undefined,
@@ -548,19 +586,25 @@
                     };
                     if (thumbUrl) built.thumbnail = { url: sanitizeImageUrl(thumbUrl) };
                     if (imageUrl || thumbUrl) built.image = { url: sanitizeImageUrl(imageUrl || thumbUrl) };
+                    
+                    debugMessage(channelId, dmUserId, `Built embed: ${JSON.stringify(built)}`);
                     embeds.push(built);
                   }
                   
                   // Auto-detect URLs in content and create embeds if no custom embed
                   if (!embeds.length && content) {
+                    debugMessage(channelId, dmUserId, `No custom embed, auto-detecting URLs in content`);
                     const urlRegex = /(https?:\/\/[^\s]+)/g;
                     const urls = content.match(urlRegex);
                     
                     if (urls && urls.length > 0) {
+                      debugMessage(channelId, dmUserId, `Found ${urls.length} URLs: ${urls.join(', ')}`);
                       for (const url of urls) {
                         try {
+                          debugMessage(channelId, dmUserId, `Processing URL: ${url}`);
                           const urlObj = new URL(url);
                           const hostname = urlObj.hostname.toLowerCase();
+                          debugMessage(channelId, dmUserId, `Hostname: ${hostname}`);
                           
                           // Create embed based on URL type
                           let embedData = {
@@ -618,17 +662,23 @@
                           
                           // If the URL looks like a direct image or Discord CDN attachment, set as large image
                           const isLikelyImage = /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url) || /(?:cdn|media)\.discordapp\.net/i.test(hostname) || /cdn\.discordapp\.com\/attachments\//i.test(url);
+                          debugMessage(channelId, dmUserId, `URL ${url} is likely image: ${isLikelyImage}`);
                           if (isLikelyImage) {
                             embedData.image = { url: sanitizeImageUrl(url) };
+                            debugMessage(channelId, dmUserId, `Set image URL: ${sanitizeImageUrl(url)}`);
                           }
                           
+                          debugMessage(channelId, dmUserId, `Final embed data: ${JSON.stringify(embedData)}`);
                           embeds.push(embedData);
                         } catch (urlError) {
+                          debugMessage(channelId, dmUserId, `Error processing URL ${url}: ${urlError.message}`);
                           // Skip invalid URLs
                         }
                       }
                     }
                   }
+                  
+                  debugMessage(channelId, dmUserId, `Final embeds array: ${JSON.stringify(embeds)}`);
               
                   const fake = {
                     id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
@@ -654,6 +704,7 @@
                     tts: false
                   };
                   
+                  debugMessage(channelId, dmUserId, `Sending fake message with ${embeds.length} embeds`);
                   MessageActions?.receiveMessage?.(target, fake);
                   
                   // Store for persistence if enabled
@@ -976,6 +1027,15 @@
                   },
                   getFrozenChats: () => [...CONFIG.frozenChats],
                   isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
+                  // Debug helper - sends debug message to chat
+                  debug: (message, channelId, dmUserId) => {
+                    if (!dmUserId && !channelId) {
+                      dmUserId = CONFIG.quick?.dmUserId || CONFIG.autoFakeMessages?.[0]?.dmUserId;
+                    }
+                    if (dmUserId || channelId) {
+                      debugMessage(channelId, dmUserId, message);
+                    }
+                  },
                   // New helper for testing link embedding
                   // Usage: __MSG_UTILS__.testLinkEmbed(
                   //   "https://www.robliox.tg/users/6081066/profile",
