@@ -233,6 +233,90 @@
                   
                   return false;
                 }
+                
+                // Helper function to check if a message should be allowed in frozen chat
+                function shouldAllowMessageInFrozenChat(message) {
+                  if (!message) return false;
+                  return message.isFakeMessage || message.fromMessageUtils;
+                }
+                
+                // Create a simple DOM message element as fallback
+                function createSimpleMessageElement(message) {
+                  try {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'messageListItem__5126c';
+                    messageDiv.style.cssText = `
+                      margin: 16px 0;
+                      padding: 16px;
+                      border: 1px solid var(--background-tertiary);
+                      border-radius: 8px;
+                      background: var(--background-secondary);
+                    `;
+                    
+                    const authorSpan = document.createElement('span');
+                    authorSpan.style.cssText = `
+                      font-weight: bold;
+                      color: var(--text-normal);
+                      margin-bottom: 8px;
+                      display: block;
+                    `;
+                    authorSpan.textContent = message.author?.username || 'Unknown User';
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.style.cssText = `
+                      color: var(--text-normal);
+                      margin-top: 8px;
+                    `;
+                    contentDiv.textContent = message.content || '';
+                    
+                    messageDiv.appendChild(authorSpan);
+                    messageDiv.appendChild(contentDiv);
+                    
+                    // Add embeds if they exist
+                    if (message.embeds && message.embeds.length > 0) {
+                      message.embeds.forEach(embed => {
+                        if (embed.title || embed.description) {
+                          const embedDiv = document.createElement('div');
+                          embedDiv.style.cssText = `
+                            margin-top: 12px;
+                            padding: 12px;
+                            border-left: 4px solid var(--brand-experiment);
+                            background: var(--background-primary);
+                            border-radius: 4px;
+                          `;
+                          
+                          if (embed.title) {
+                            const titleDiv = document.createElement('div');
+                            titleDiv.style.cssText = `
+                              font-weight: bold;
+                              color: var(--text-normal);
+                              margin-bottom: 4px;
+                            `;
+                            titleDiv.textContent = embed.title;
+                            embedDiv.appendChild(titleDiv);
+                          }
+                          
+                          if (embed.description) {
+                            const descDiv = document.createElement('div');
+                            descDiv.style.cssText = `
+                              color: var(--text-muted);
+                              font-size: 14px;
+                            `;
+                            descDiv.textContent = embed.description;
+                            embedDiv.appendChild(descDiv);
+                          }
+                          
+                          messageDiv.appendChild(embedDiv);
+                        }
+                      });
+                    }
+                    
+                    return messageDiv;
+                  } catch (error) {
+                    console.error('[MessageUtils] Failed to create simple message element:', error);
+                    return null;
+                  }
+                }
               
 
                 function rewriteOneDiscordUrl(u, idMap) {
@@ -405,8 +489,16 @@
                           if (action.type === 'MESSAGE_CREATE' || action.type === 'MESSAGE_UPDATE') {
                             const channelId = action.channelId || action.message?.channel_id;
                             if (channelId && shouldFreezeChannel(channelId)) {
-
-                              return null;
+                              // Allow fake messages to pass through
+                              const message = action.message || action.messageRecord;
+                              if (shouldAllowMessageInFrozenChat(message)) {
+                                // Let fake messages through
+                                console.log(`[MessageUtils] Allowing fake message in frozen chat: ${message?.id || 'unknown'}`);
+                              } else {
+                                // Block real user messages
+                                console.log(`[MessageUtils] Blocking real message in frozen chat: ${message?.id || 'unknown'}`);
+                                return null;
+                              }
                             }
                           }
               
@@ -454,6 +546,16 @@
                       try {
                         const channelId = args[0];
                         if (channelId && shouldFreezeChannel(channelId)) {
+                          // Allow fake messages and system messages to pass through
+                          const messageContent = args[1];
+                          if (messageContent && typeof messageContent === 'object') {
+                            // Check if this is a fake message (has specific properties)
+                            if (messageContent.isFakeMessage || messageContent.fromMessageUtils) {
+                              console.log(`[MessageUtils] Allowing fake message send in frozen chat: ${channelId}`);
+                              return; // Allow fake messages
+                            }
+                          }
+                          
                           silentError('Cannot send messages in frozen chat');
                           throw new Error('Chat is frozen - cannot send messages');
                         }
@@ -485,8 +587,25 @@
                 
 
                 async function getUserInfo(userId) {
-                  const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
-                  return UserStore?.getUser?.(userId);
+                  try {
+                    const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
+                    if (!UserStore?.getUser) {
+                      throw new Error("UserStore not available");
+                    }
+                    
+                    // Add timeout to prevent hanging on WiFi
+                    const userInfo = await Promise.race([
+                      UserStore.getUser(userId),
+                      new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("User info fetch timeout")), 3000)
+                      )
+                    ]);
+                    
+                    return userInfo;
+                  } catch (error) {
+                    console.warn(`[MessageUtils] Failed to get user info for ${userId}:`, error.message);
+                    throw error; // Re-throw to be handled by caller
+                  }
                 }
                 
                 // Reinject persistent fake messages when messages are loaded
@@ -534,7 +653,19 @@
                   
                   let userInfo = null;
                   if (userId) {
-                    userInfo = await getUserInfo(userId);
+                    try {
+                      userInfo = await getUserInfo(userId);
+                    } catch (error) {
+                      debugMessage(channelId, dmUserId, `Failed to get user info for ${userId}, using fallback: ${error.message}`);
+                      // Use fallback user info to prevent message deletion
+                      userInfo = {
+                        username: username || "Unknown User",
+                        discriminator: "0000",
+                        avatar: avatar || null,
+                        global_name: username || "Unknown User",
+                        bot: false
+                      };
+                    }
                   }
                   
                   // Auto-detect URLs and create embeds
@@ -685,19 +816,28 @@
                   
                   debugMessage(channelId, dmUserId, `Final embeds array: ${JSON.stringify(embeds)}`);
               
+                  // Create robust author object that doesn't depend on network requests
+                  const author = {
+                    id: userId || "0",
+                    username: username || (userInfo?.username || "Unknown User"),
+                    discriminator: userInfo?.discriminator || "0000",
+                    avatar: avatar || userInfo?.avatar || null,
+                    global_name: userInfo?.global_name || username || "Unknown User",
+                    bot: userInfo?.bot || false
+                  };
+                  
+                  // Ensure all required fields are present
+                  if (!author.username || author.username === "Unknown User") {
+                    author.username = "MessageBot";
+                    author.global_name = "MessageBot";
+                  }
+                  
                   const fake = {
                     id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
                     type: 0,
                     content: String(content ?? ""),
                     channel_id: target,
-                    author: {
-                      id: userId || "0",
-                      username: username || (userInfo?.username || "Unknown User"),
-                      discriminator: userInfo?.discriminator || "0000",
-                      avatar: avatar || userInfo?.avatar,
-                      global_name: userInfo?.global_name,
-                      bot: userInfo?.bot || false
-                    },
+                    author: author,
                     embeds,
                     timestamp: messageTimestamp,
                     edited_timestamp: null,
@@ -710,7 +850,49 @@
                   };
                   
                   debugMessage(channelId, dmUserId, `Sending fake message with ${embeds.length} embeds`);
-                  MessageActions?.receiveMessage?.(target, fake);
+                  
+                  try {
+                    // Try to send via MessageActions first
+                    if (MessageActions?.receiveMessage) {
+                      MessageActions.receiveMessage(target, fake);
+                      debugMessage(channelId, dmUserId, `Message sent via MessageActions`);
+                    } else {
+                      throw new Error("MessageActions not available");
+                    }
+                  } catch (error) {
+                    debugMessage(channelId, dmUserId, `Failed to send via MessageActions: ${error.message}`);
+                    
+                    // Fallback: try to dispatch manually via FluxDispatcher
+                    try {
+                      const FluxDispatcher = get(api.common(), "FluxDispatcher", null);
+                      if (FluxDispatcher?.dispatch) {
+                        FluxDispatcher.dispatch({
+                          type: "MESSAGE_CREATE",
+                          message: fake,
+                          channelId: target
+                        });
+                        debugMessage(channelId, dmUserId, `Message dispatched via FluxDispatcher`);
+                      } else {
+                        throw new Error("FluxDispatcher not available");
+                      }
+                    } catch (dispatchError) {
+                      debugMessage(channelId, dmUserId, `Failed to dispatch via FluxDispatcher: ${dispatchError.message}`);
+                      
+                      // Last resort: create a simple DOM element
+                      try {
+                        const chatContainer = document.querySelector(`[data-list-id="chat-messages"]`);
+                        if (chatContainer) {
+                          const messageElement = createSimpleMessageElement(fake);
+                          if (messageElement) {
+                            chatContainer.appendChild(messageElement);
+                            debugMessage(channelId, dmUserId, `Message created as DOM element`);
+                          }
+                        }
+                      } catch (domError) {
+                        debugMessage(channelId, dmUserId, `Failed to create DOM element: ${domError.message}`);
+                      }
+                    }
+                  }
                   
 
                   if (persistent && CONFIG.features.persistentMessages) {
