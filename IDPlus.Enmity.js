@@ -134,33 +134,6 @@
                 } catch { return u; }
               }
               
-              async function debugMessage(channelId, dmUserId, message) {
-                try {
-                  const MessageActions = await waitForProps(["receiveMessage"]);
-                  const target = await normalizeTarget({ channelId, dmUserId });
-                  
-                  const debugMsg = {
-                    id: `debug_${Date.now()}`,
-                    type: 0,
-                    content: `🔍 DEBUG: ${message}`,
-                    channel_id: target,
-                    author: { id: "0", username: "MessageUtils Debug", discriminator: "0000", bot: true },
-                    embeds: [],
-                    timestamp: new Date().toISOString(),
-                    edited_timestamp: null,
-                    flags: 0,
-                    mention_everyone: false,
-                    mention_roles: [],
-                    mentions: [],
-                    pinned: false,
-                    tts: false
-                  };
-                  
-                  MessageActions?.receiveMessage?.(target, debugMsg);
-                } catch (error) {
-
-                }
-              }
               
               
                 const silentError = (msg) => {
@@ -260,7 +233,7 @@
                       margin-bottom: 8px;
                       display: block;
                     `;
-                    authorSpan.textContent = message.author?.username || 'Unknown User';
+                    authorSpan.textContent = message.author?.username || 'MessageBot';
                     
                     const contentDiv = document.createElement('div');
                     contentDiv.style.cssText = `
@@ -311,9 +284,100 @@
                       });
                     }
                     
+                    // Mark as fake message element
+                    messageDiv.setAttribute('data-fake-message', 'true');
+                    messageDiv.setAttribute('data-message-id', message.id);
+                    
                     return messageDiv;
                   } catch (error) {
                     console.error('[MessageUtils] Failed to create simple message element:', error);
+                    return null;
+                  }
+                }
+                
+                // Get current channel ID from URL or DOM
+                function getCurrentChannelId() {
+                  try {
+                    const url = window.location.href;
+                    let channelId = null;
+
+                    if (url.includes('/channels/')) {
+                      if (url.includes('/channels/@me/')) {
+                        const dmChannelId = url.split('/channels/@me/')[1]?.split('/')[0];
+                        if (dmChannelId) channelId = dmChannelId;
+                      } else {
+                        const match = url.match(/channels\/\d+\/(\d+)/);
+                        if (match?.[1]) channelId = match[1];
+                      }
+                    }
+
+                    if (!channelId) {
+                      const channelElement = document.querySelector('[data-list-id="chat-messages"]');
+                      const elementId = channelElement?.getAttribute('data-channel-id');
+                      if (elementId) channelId = elementId;
+                    }
+
+                    if (!channelId) {
+                      const pathId = window.location.pathname.split('/').pop();
+                      if (pathId) channelId = pathId;
+                    }
+                    
+                    return channelId;
+                  } catch (err) {
+                    console.error("[MessageUtils] Error getting channel ID:", err);
+                    return null;
+                  }
+                }
+                
+                // Function to prevent fake message deletion
+                function setupMessageDeletionProtection() {
+                  try {
+                    // Watch for message deletions and reinject fake messages
+                    const observer = new MutationObserver((mutations) => {
+                      mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList') {
+                          mutation.removedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                              // Check if a fake message was removed
+                              if (node.getAttribute('data-fake-message') === 'true') {
+                                const messageId = node.getAttribute('data-message-id');
+                                console.log(`[MessageUtils] Fake message ${messageId} was removed, attempting to restore...`);
+                                
+                                // Try to restore from persistent storage
+                                const channelId = getCurrentChannelId();
+                                if (channelId && persistentFakeMessages.has(channelId)) {
+                                  const messages = persistentFakeMessages.get(channelId);
+                                  const messageToRestore = messages.find(m => m.id === messageId);
+                                  if (messageToRestore) {
+                                    setTimeout(() => {
+                                      const chatContainer = document.querySelector(`[data-list-id="chat-messages"]`);
+                                      if (chatContainer) {
+                                        const restoredElement = createSimpleMessageElement(messageToRestore);
+                                        if (restoredElement) {
+                                          chatContainer.appendChild(restoredElement);
+                                          console.log(`[MessageUtils] Restored fake message ${messageId}`);
+                                        }
+                                      }
+                                    }, 100);
+                                  }
+                                }
+                              }
+                            }
+                          });
+                        }
+                      });
+                    });
+                    
+                    // Start observing the chat container
+                    const chatContainer = document.querySelector(`[data-list-id="chat-messages"]`);
+                    if (chatContainer) {
+                      observer.observe(chatContainer, { childList: true, subtree: true });
+                      console.log('[MessageUtils] Message deletion protection enabled');
+                    }
+                    
+                    return observer;
+                  } catch (error) {
+                    console.error('[MessageUtils] Failed to setup message deletion protection:', error);
                     return null;
                   }
                 }
@@ -588,23 +652,90 @@
 
                 async function getUserInfo(userId) {
                   try {
+                    // First try to get from UserStore (local cache)
                     const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
-                    if (!UserStore?.getUser) {
-                      throw new Error("UserStore not available");
+                    if (UserStore?.getUser) {
+                      try {
+                        const userInfo = await Promise.race([
+                          UserStore.getUser(userId),
+                          new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error("UserStore timeout")), 2000)
+                          )
+                        ]);
+                        
+                        if (userInfo && userInfo.username) {
+                          return userInfo;
+                        }
+                      } catch (error) {
+                        // UserStore failed
+                      }
                     }
                     
-                    // Add timeout to prevent hanging on WiFi
-                    const userInfo = await Promise.race([
-                      UserStore.getUser(userId),
-                      new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error("User info fetch timeout")), 3000)
-                      )
-                    ]);
+                    // Fallback: try to fetch from Discord API (like dcMessage.js does)
+                    try {
+                      
+                      // Get Discord token (this is what dcMessage.js does)
+                      const token = getDiscordToken();
+                      if (!token) {
+                        throw new Error("No Discord token available");
+                      }
+                      
+                      const response = await fetch(`https://discord.com/api/v9/users/${userId}`, {
+                        headers: {
+                          'authorization': token,
+                          'Content-Type': 'application/json'
+                        }
+                      });
+                      
+                      if (!response.ok) {
+                        throw new Error(`API response: ${response.status}`);
+                      }
+                      
+                      const user = await response.json();
+                      const userInfo = {
+                        username: user.global_name || user.username,
+                        discriminator: user.discriminator || "0000",
+                        avatar: user.avatar ? 
+                          `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.webp?size=128` :
+                          `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
+                        global_name: user.global_name || user.username,
+                        bot: user.bot || false
+                      };
+                      
+                      return userInfo;
+                      
+                    } catch (apiError) {
+                      throw apiError;
+                    }
                     
-                    return userInfo;
                   } catch (error) {
                     console.warn(`[MessageUtils] Failed to get user info for ${userId}:`, error.message);
-                    throw error; // Re-throw to be handled by caller
+                    throw error;
+                  }
+                }
+                
+                // Function to get Discord token (similar to dcMessage.js)
+                function getDiscordToken() {
+                  try {
+                    // Try multiple methods to get the token
+                    const token = (webpackChunkdiscord_app?.push?.([[Math.random()], {}, (e) => e.c = e.c || []]) || [])[1]?.c?.find(c => c?.exports?.default?.getToken !== void 0)?.exports?.default?.getToken();
+                    if (token) return token;
+                    
+                    // Alternative method
+                    const modules = Object.values(webpackChunkdiscord_app?.push?.([[Math.random()], {}, (e) => e.c = e.c || []]) || [])[1]?.c || [];
+                    for (const module of modules) {
+                      if (module?.exports?.default?.getToken) {
+                        return module.exports.default.getToken();
+                      }
+                      if (module?.exports?.getToken) {
+                        return module.exports.getToken();
+                      }
+                    }
+                    
+                    return null;
+                  } catch (error) {
+                    console.warn('[MessageUtils] Failed to get Discord token:', error.message);
+                    return null;
                   }
                 }
                 
@@ -626,7 +757,6 @@
                 
 
                 async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
-                  debugMessage(channelId, dmUserId, `fakeMessage called with content: "${content}" and embed: ${JSON.stringify(embed)}`);
                   
                   const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
                   const target = await normalizeTarget({ channelId, dmUserId });
@@ -656,7 +786,6 @@
                     try {
                       userInfo = await getUserInfo(userId);
                     } catch (error) {
-                      debugMessage(channelId, dmUserId, `Failed to get user info for ${userId}, using fallback: ${error.message}`);
                       // Use fallback user info to prevent message deletion
                       userInfo = {
                         username: username || "Unknown User",
@@ -666,13 +795,21 @@
                         bot: false
                       };
                     }
+                  } else if (username) {
+                    // If no userId but username provided, create user info
+                    userInfo = {
+                      username: username,
+                      discriminator: "0000",
+                      avatar: avatar || null,
+                      global_name: username,
+                      bot: false
+                    };
                   }
                   
                   // Auto-detect URLs and create embeds
                   let embeds = [];
                   
                   if (embed && (embed.title || embed.description || embed.url || embed.thumbnail || embed.image)) {
-                    debugMessage(channelId, dmUserId, `Custom embed provided: ${JSON.stringify(embed)}`);
                     
 
                     let embedUrl = embed.url;
@@ -681,15 +818,11 @@
                       const urls = content.match(urlRegex);
                       if (urls && urls.length > 0) {
                         embedUrl = urls[0]; // Use first URL found
-                        debugMessage(channelId, dmUserId, `Extracted URL from content: ${embedUrl}`);
                       }
                     }
                     
                     const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
                     const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
-                    
-                    debugMessage(channelId, dmUserId, `Thumbnail URL: ${thumbUrl || 'none'}`);
-                    debugMessage(channelId, dmUserId, `Image URL: ${imageUrl || 'none'}`);
                     
                     const built = {
                       type: "rich",
@@ -706,7 +839,6 @@
                         width: 80,
                         height: 80
                       };
-                      debugMessage(channelId, dmUserId, `Added thumbnail with dimensions: 80x80`);
                     }
                     
                     // Set image if provided, otherwise use thumbnail as large image
@@ -715,27 +847,21 @@
                     } else if (thumbUrl) {
                       // Use thumbnail as the main image for better visibility
                       built.image = { url: sanitizeImageUrl(thumbUrl) };
-                      debugMessage(channelId, dmUserId, `Using thumbnail as main image`);
                     }
                     
-                    debugMessage(channelId, dmUserId, `Built embed: ${JSON.stringify(built)}`);
                     embeds.push(built);
                   }
                   
                   // Auto-detect URLs in content and create embeds if no custom embed
                   if (!embeds.length && content) {
-                    debugMessage(channelId, dmUserId, `No custom embed, auto-detecting URLs in content`);
                     const urlRegex = /(https?:\/\/[^\s]+)/g;
                     const urls = content.match(urlRegex);
                     
                     if (urls && urls.length > 0) {
-                      debugMessage(channelId, dmUserId, `Found ${urls.length} URLs: ${urls.join(', ')}`);
                       for (const url of urls) {
                         try {
-                          debugMessage(channelId, dmUserId, `Processing URL: ${url}`);
                           const urlObj = new URL(url);
                           const hostname = urlObj.hostname.toLowerCase();
-                          debugMessage(channelId, dmUserId, `Hostname: ${hostname}`);
                           
                           // Create embed based on URL type
                           let embedData = {
@@ -796,41 +922,35 @@
                                                /(?:cdn|media)\.discordapp\.net/i.test(hostname) || 
                                                /cdn\.discordapp\.com\/attachments\//i.test(url) ||
                                                /external\/.*\/https:\/\/.*\.(png|jpe?g|gif|webp)/i.test(url);
-                          debugMessage(channelId, dmUserId, `URL ${url} is likely image: ${isLikelyImage}`);
                           if (isLikelyImage) {
                             const sanitizedUrl = sanitizeImageUrl(url);
-                            debugMessage(channelId, dmUserId, `Original URL: ${url}`);
-                            debugMessage(channelId, dmUserId, `Sanitized URL: ${sanitizedUrl}`);
                             embedData.image = { url: sanitizedUrl };
-                            debugMessage(channelId, dmUserId, `Set image URL: ${sanitizedUrl}`);
                           }
                           
-                          debugMessage(channelId, dmUserId, `Final embed data: ${JSON.stringify(embedData)}`);
                           embeds.push(embedData);
                         } catch (urlError) {
-                          debugMessage(channelId, dmUserId, `Error processing URL ${url}: ${urlError.message}`);
+                          // Skip invalid URLs
                         }
                       }
                     }
                   }
-                  
-                  debugMessage(channelId, dmUserId, `Final embeds array: ${JSON.stringify(embeds)}`);
               
                   // Create robust author object that doesn't depend on network requests
                   const author = {
                     id: userId || "0",
-                    username: username || (userInfo?.username || "Unknown User"),
+                    username: username || userInfo?.username || "MessageBot",
                     discriminator: userInfo?.discriminator || "0000",
                     avatar: avatar || userInfo?.avatar || null,
-                    global_name: userInfo?.global_name || username || "Unknown User",
+                    global_name: username || userInfo?.global_name || "MessageBot",
                     bot: userInfo?.bot || false
                   };
                   
-                  // Ensure all required fields are present
+                  // Ensure all required fields are present and not "Unknown User"
                   if (!author.username || author.username === "Unknown User") {
-                    author.username = "MessageBot";
-                    author.global_name = "MessageBot";
+                    author.username = username || "MessageBot";
+                    author.global_name = username || "MessageBot";
                   }
+                  
                   
                   const fake = {
                     id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
@@ -846,16 +966,17 @@
                     mention_roles: [],
                     mentions: [],
                     pinned: false,
-                    tts: false
+                    tts: false,
+                    // Mark as fake message to prevent deletion
+                    isFakeMessage: true,
+                    fromMessageUtils: true,
+                    _persistent: true // Additional flag for persistence
                   };
-                  
-                  debugMessage(channelId, dmUserId, `Sending fake message with ${embeds.length} embeds`);
                   
                   try {
                     // Try to send via MessageActions first
                     if (MessageActions?.receiveMessage) {
                       MessageActions.receiveMessage(target, fake);
-                      debugMessage(channelId, dmUserId, `Message sent via MessageActions`);
                     } else {
                       throw new Error("MessageActions not available");
                     }
@@ -1262,6 +1383,48 @@
                       debugMessage(channelId, dmUserId, message);
                     }
                   },
+                  
+                  // Test function to verify fake message functionality
+                  testFakeMessage: async (channelId, dmUserId) => {
+                    console.log("[MessageUtils] Testing fake message functionality...");
+                    try {
+                      const result = await fakeMessage({
+                        channelId,
+                        dmUserId,
+                        content: "🧪 Test fake message - this should appear and stay!",
+                        userId: "0",
+                        username: "TestBot",
+                        timestamp: new Date().toISOString(),
+                        persistent: true
+                      });
+                      console.log("[MessageUtils] Test fake message result:", result);
+                      return result;
+                    } catch (error) {
+                      console.error("[MessageUtils] Test fake message failed:", error);
+                      return null;
+                    }
+                  },
+                  
+                  // Test function with custom username
+                  testCustomUsername: async (username, channelId, dmUserId) => {
+                    console.log(`[MessageUtils] Testing fake message with username: ${username}`);
+                    try {
+                      const result = await fakeMessage({
+                        channelId,
+                        dmUserId,
+                        content: `🧪 Test message from ${username} - this should show the correct username!`,
+                        userId: "0",
+                        username: username,
+                        timestamp: new Date().toISOString(),
+                        persistent: true
+                      });
+                      console.log("[MessageUtils] Custom username test result:", result);
+                      return result;
+                    } catch (error) {
+                      console.error("[MessageUtils] Custom username test failed:", error);
+                      return null;
+                    }
+                  },
                   sendProfileEmbed: (content, embed, channelId, dmUserId) => {
                     let thumbnailUrl = embed.embedThumbnail;
                     if (thumbnailUrl) {
@@ -1328,6 +1491,13 @@
 
                     if (CONFIG.features.autoFakeMessages) {
                       sendAutoFakeMessages();
+                    }
+                    
+                    // Setup message deletion protection
+                    if (CONFIG.features.persistentMessages) {
+                      setTimeout(() => {
+                        setupMessageDeletionProtection();
+                      }, 2000); // Wait for Discord to fully load
                     }
                   } catch (e) {
                     silentError("Failed to start");
