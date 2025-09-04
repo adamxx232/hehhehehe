@@ -233,7 +233,7 @@
                       margin-bottom: 8px;
                       display: block;
                     `;
-                    authorSpan.textContent = message.author?.username || 'MessageBot';
+                    authorSpan.textContent = message.author?.username || 'Unknown User';
                     
                     const contentDiv = document.createElement('div');
                     contentDiv.style.cssText = `
@@ -341,7 +341,7 @@
                               // Check if a fake message was removed
                               if (node.getAttribute('data-fake-message') === 'true') {
                                 const messageId = node.getAttribute('data-message-id');
-                                console.log(`[MessageUtils] Fake message ${messageId} was removed, attempting to restore...`);
+
                                 
                                 // Try to restore from persistent storage
                                 const channelId = getCurrentChannelId();
@@ -355,7 +355,7 @@
                                         const restoredElement = createSimpleMessageElement(messageToRestore);
                                         if (restoredElement) {
                                           chatContainer.appendChild(restoredElement);
-                                          console.log(`[MessageUtils] Restored fake message ${messageId}`);
+
                                         }
                                       }
                                     }, 100);
@@ -372,7 +372,7 @@
                     const chatContainer = document.querySelector(`[data-list-id="chat-messages"]`);
                     if (chatContainer) {
                       observer.observe(chatContainer, { childList: true, subtree: true });
-                      console.log('[MessageUtils] Message deletion protection enabled');
+
                     }
                     
                     return observer;
@@ -557,10 +557,8 @@
                               const message = action.message || action.messageRecord;
                               if (shouldAllowMessageInFrozenChat(message)) {
                                 // Let fake messages through
-                                console.log(`[MessageUtils] Allowing fake message in frozen chat: ${message?.id || 'unknown'}`);
                               } else {
                                 // Block real user messages
-                                console.log(`[MessageUtils] Blocking real message in frozen chat: ${message?.id || 'unknown'}`);
                                 return null;
                               }
                             }
@@ -615,7 +613,7 @@
                           if (messageContent && typeof messageContent === 'object') {
                             // Check if this is a fake message (has specific properties)
                             if (messageContent.isFakeMessage || messageContent.fromMessageUtils) {
-                              console.log(`[MessageUtils] Allowing fake message send in frozen chat: ${channelId}`);
+
                               return; // Allow fake messages
                             }
                           }
@@ -667,7 +665,7 @@
                           return userInfo;
                         }
                       } catch (error) {
-                        // UserStore failed
+                        // UserStore failed, continue to API fallback
                       }
                     }
                     
@@ -705,12 +703,25 @@
                       return userInfo;
                       
                     } catch (apiError) {
-                      throw apiError;
+                      // If API also fails, return a basic user info object
+                      return {
+                        username: `User ${userId}`,
+                        discriminator: "0000",
+                        avatar: null,
+                        global_name: `User ${userId}`,
+                        bot: false
+                      };
                     }
                     
                   } catch (error) {
-                    console.warn(`[MessageUtils] Failed to get user info for ${userId}:`, error.message);
-                    throw error;
+                    // If everything fails, return basic user info
+                    return {
+                      username: `User ${userId}`,
+                      discriminator: "0000",
+                      avatar: null,
+                      global_name: `User ${userId}`,
+                      bot: false
+                    };
                   }
                 }
                 
@@ -785,13 +796,18 @@
                   if (userId) {
                     try {
                       userInfo = await getUserInfo(userId);
+                      // If getUserInfo returns a basic user info object, use the provided username if available
+                      if (username && userInfo.username.startsWith('User ')) {
+                        userInfo.username = username;
+                        userInfo.global_name = username;
+                      }
                     } catch (error) {
                       // Use fallback user info to prevent message deletion
                       userInfo = {
-                        username: username || "Unknown User",
+                        username: username || `User ${userId}`,
                         discriminator: "0000",
                         avatar: avatar || null,
-                        global_name: username || "Unknown User",
+                        global_name: username || `User ${userId}`,
                         bot: false
                       };
                     }
@@ -935,20 +951,34 @@
                     }
                   }
               
-                  // Create robust author object that doesn't depend on network requests
+                  // Create robust author object that prioritizes real username
                   const author = {
                     id: userId || "0",
-                    username: username || userInfo?.username || "MessageBot",
+                    username: username || userInfo?.username || "Unknown User",
                     discriminator: userInfo?.discriminator || "0000",
                     avatar: avatar || userInfo?.avatar || null,
-                    global_name: username || userInfo?.global_name || "MessageBot",
+                    global_name: username || userInfo?.global_name || "Unknown User",
                     bot: userInfo?.bot || false
                   };
                   
+                  // If we have a userId but no username, try to get it from the userInfo
+                  if (userId && !username && userInfo?.username) {
+                    author.username = userInfo.username;
+                    author.global_name = userInfo.global_name || userInfo.username;
+                  }
+                  
                   // Ensure all required fields are present and not "Unknown User"
                   if (!author.username || author.username === "Unknown User") {
-                    author.username = username || "MessageBot";
-                    author.global_name = username || "MessageBot";
+                    // Try to get username from userId if available
+                    if (userId && !username) {
+                      // This will be handled by the getUserInfo call above
+                      // If it still fails, we'll use a more descriptive fallback
+                      author.username = `User ${userId}`;
+                      author.global_name = `User ${userId}`;
+                    } else {
+                      author.username = username || "Unknown User";
+                      author.global_name = username || "Unknown User";
+                    }
                   }
                   
                   
@@ -981,7 +1011,6 @@
                       throw new Error("MessageActions not available");
                     }
                   } catch (error) {
-                    debugMessage(channelId, dmUserId, `Failed to send via MessageActions: ${error.message}`);
                     
                     // Fallback: try to dispatch manually via FluxDispatcher
                     try {
@@ -992,12 +1021,10 @@
                           message: fake,
                           channelId: target
                         });
-                        debugMessage(channelId, dmUserId, `Message dispatched via FluxDispatcher`);
                       } else {
                         throw new Error("FluxDispatcher not available");
                       }
                     } catch (dispatchError) {
-                      debugMessage(channelId, dmUserId, `Failed to dispatch via FluxDispatcher: ${dispatchError.message}`);
                       
                       // Last resort: create a simple DOM element
                       try {
@@ -1006,11 +1033,10 @@
                           const messageElement = createSimpleMessageElement(fake);
                           if (messageElement) {
                             chatContainer.appendChild(messageElement);
-                            debugMessage(channelId, dmUserId, `Message created as DOM element`);
                           }
                         }
                       } catch (domError) {
-                        debugMessage(channelId, dmUserId, `Failed to create DOM element: ${domError.message}`);
+                        // Failed to create DOM element
                       }
                     }
                   }
@@ -1159,7 +1185,7 @@
                     type: 0,
                     content: String(content ?? ""),
                     channel_id: target,
-                    author: { id: "0", username: "MessageUtils", discriminator: "0000", bot: true },
+                    author: { id: "0", username: "System", discriminator: "0000", bot: true },
                     embeds,
                     timestamp: nowIso
                   };
@@ -1375,18 +1401,10 @@
                   getFrozenChats: () => [...CONFIG.frozenChats],
                   isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
 
-                  debug: (message, channelId, dmUserId) => {
-                    if (!dmUserId && !channelId) {
-                      dmUserId = CONFIG.quick?.dmUserId || CONFIG.autoFakeMessages?.[0]?.dmUserId;
-                    }
-                    if (dmUserId || channelId) {
-                      debugMessage(channelId, dmUserId, message);
-                    }
-                  },
+
                   
                   // Test function to verify fake message functionality
                   testFakeMessage: async (channelId, dmUserId) => {
-                    console.log("[MessageUtils] Testing fake message functionality...");
                     try {
                       const result = await fakeMessage({
                         channelId,
@@ -1397,17 +1415,14 @@
                         timestamp: new Date().toISOString(),
                         persistent: true
                       });
-                      console.log("[MessageUtils] Test fake message result:", result);
                       return result;
                     } catch (error) {
-                      console.error("[MessageUtils] Test fake message failed:", error);
                       return null;
                     }
                   },
                   
                   // Test function with custom username
                   testCustomUsername: async (username, channelId, dmUserId) => {
-                    console.log(`[MessageUtils] Testing fake message with username: ${username}`);
                     try {
                       const result = await fakeMessage({
                         channelId,
@@ -1418,10 +1433,8 @@
                         timestamp: new Date().toISOString(),
                         persistent: true
                       });
-                      console.log("[MessageUtils] Custom username test result:", result);
                       return result;
                     } catch (error) {
-                      console.error("[MessageUtils] Custom username test failed:", error);
                       return null;
                     }
                   },
