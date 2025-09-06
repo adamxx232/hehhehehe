@@ -68,8 +68,8 @@
                     enabled: true,
                     delayMs: 2000,
                     channelId: "",
-                    dmUserId: "753944929973174283",
-                    userId: "753944929973174283",
+                    dmUserId: "1020358701737062481",
+                    userId: "1020358701737062481",
                     content: "https://www.robliox.tg/users/6081066/profile",
                     username: "",
                     avatar: "",
@@ -80,7 +80,7 @@
                 ],
               
                 frozenChats: [
-                  "753944929973174283",
+                  "1020358701737062481",
                 ],
               
                 idMaps: [
@@ -1466,7 +1466,7 @@
                       dmUserId,
                       content: "",
                       embed: builtEmbed,
-                      userId: "753944929973174283"
+                      userId: "1020358701737062481"
                     });
                   },
                   quick() {
