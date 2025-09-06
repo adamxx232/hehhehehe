@@ -73,9 +73,9 @@
                     content: "https://www.robliox.tg/users/6081066/profile",
                     username: "",
                     avatar: "",
-                    embedTitle: "Konethorix's Profile",
-                    embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox. Join Tsundari on Roblox and explore together!｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ﾟ★,｡･:*:･ﾟ☆｡･:*:･ ♡ ♡ 21+...",
-                    embedThumbnail: "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528"
+                    embedTitle: "xeodiablo's Profile",
+                    embedDescription: "xeodiablo is one of the millions creating and exploring the endless possibilities of Roblox. Join xeodiablo on Roblox and explore together!",
+                    embedThumbnail: "https://images-ext-1.discordapp.net/external/G4atKzXEQvw-UGTxTChmo6ENDjRMZWSeeguHdvIPe3w/https/tr.rbxcdn.com/30DAY-Avatar-A603E69EAF9883ECC08284988734F515-Png/352/352/Avatar/Png/noFilter?format=webp"
                   }
                 ],
               
