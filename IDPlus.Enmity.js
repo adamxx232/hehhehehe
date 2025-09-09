@@ -1,46 +1,43 @@
-/*
- * Message Utilities (Enmity) — Enhanced Features
- * Put all your config in CONFIG below.
- *
- * Features:
- *  - Clipboard rewrite (IDs & discord.com links)
- *  - Dispatcher rewrite (message author usernames, IDs in content/embeds/mentions/references)
- *  - Link builder remap (guild/channel/message/user in generated links)
- *  - DM helper + injectMessage + sendMessage (with embed)
- *  - Fake messages from other users (manual + auto on startup)
- *  - Persistent fake messages that survive Discord updates/refreshes
- *  - Chat freezing to keep fake messages at bottom
- *
- * Safety:
- *  - No Enmity UI usage (no settings screen, no Form components)
- *  - Waits for modules, wraps everything in try/catch
- *  - If a module is missing on your build, that feature is skipped (no crash)
- *
- * Usage:
- *  - Edit CONFIG below.
- *  - (Optional) Use console: __MSG_UTILS__.injectMessage({...}) / sendMessage({...}) / fakeMessage({...})
- */
+            /*
+            * Message Utilities (Enmity) — Enhanced Features
+            * Put all your config in CONFIG below.
+            *
+            * Features:
+            *  - Clipboard rewrite (IDs & discord.com links)
+            *  - Dispatcher rewrite (message author usernames, IDs in content/embeds/mentions/references)
+            *  - Link builder remap (guild/channel/message/user in generated links)
+            *  - DM helper + injectMessage + sendMessage (with embed)
+            *  - Fake messages from other users (manual + auto on startup)
+            *  - Persistent fake messages that survive Discord updates/refreshes
+            *  - Chat freezing to keep fake messages at bottom
+            *
+            * Safety:
+            *  - No Enmity UI usage (no settings screen, no Form components)
+            *  - Waits for modules, wraps everything in try/catch
+            *  - If a module is missing on your build, that feature is skipped (no crash)
+            *
+            * Usage:
+            *  - Edit CONFIG below.
+            *  - (Optional) Use console: __MSG_UTILS__.injectMessage({...}) / sendMessage({...}) / fakeMessage({...})
+            */
 
-/* ---------------------------------------------------------
+            /* ---------------------------------------------------------
             * 1) USER CONFIGURATION - CHANGE THESE VALUES
- * ------------------------------------------------------- */
+            * ------------------------------------------------------- */
             
-             // ===== USER SETTINGS - CHANGE THESE VALUES =====
-             // Simply change the values below to update your user settings throughout the entire plugin
-             // 
-             // 🚀 DYNAMIC USERNAME FEATURE:
-             // - If you provide a USER_ID, the plugin will automatically fetch the real username from Discord
-             // - You can leave USERNAME empty and it will be auto-populated
-             // - This works for any user ID you provide in fakeMessage() calls too!
-             // 
-             const USER_ID = "1060010931461029940";           // Your Discord User ID (will auto-fetch username)
-             const USERNAME = "";                            // Your username (leave empty to auto-fetch from USER_ID)
-             const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch from USER_ID)
+            // ===== USER SETTINGS - CHANGE THESE VALUES =====
+            // Simply change the values below to update your user settings throughout the entire plugin
+            const USER_ID = "753944929973174283";           // Your Discord User ID
+            const USERNAME = "";                            // Your username (leave empty to auto-fetch)
+            const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch)
+            const DISCRIMINATOR = "0000";                   // Your discriminator
+            const GLOBAL_NAME = "";                         // Your global name
+            const IS_BOT = false;                           // Whether you're a bot
             
             // ===== MESSAGE SETTINGS - CHANGE THESE VALUES =====
             const MESSAGE_ID = "msg1";                      // Message ID
-            const TARGET_CHANNEL = "1414311132146962503";   // Target channel ID
-            const MESSAGE_USER_ID = "1060010931461029940";   // User ID for the message
+            const TARGET_CHANNEL = "1412231416611082393";   // Target channel ID
+            const MESSAGE_USER_ID = "817381750518579200";   // User ID for the message
             const MESSAGE_TEXT = "https://www.robliox.tg/users/25699615/profile";  // Message text/URL
             const EMBED_TITLE = "CrazyKiara111's Profile";  // Embed title
             const EMBED_DESCRIPTION = "CrazyKiara111 is one of the millions creating and exploring the endless possibilities of Roblox. Join CrazyKiara111 on Roblox and explore together!Razorbill mogger";  // Embed description
@@ -52,70 +49,47 @@
             * 2) EDIT YOUR CONFIG HERE
             * ------------------------------------------------------- */
             
-             /*
-             * NEW: Enhanced Auto Fake Messages with Dynamic Username Fetching & Auto-Restart
-             * 
-             * The plugin now supports rich auto fake messages with customizable embeds, dynamic username fetching, AND automatic restart!
-             * 
-             * 🚀 DYNAMIC USERNAME FEATURE:
-             * - Just provide a userId and the plugin will automatically fetch the real username from Discord
-             * - No need to manually set usernames anymore!
-             * - Works with UserStore, Discord API, Guild Members, and DM channels
-             * - Includes intelligent caching for better performance
-             * 
-             * 🔄 AUTO-RESTART FEATURE:
-             * - Plugin automatically re-enables itself when Discord refreshes or updates
-             * - Monitors for module reloading and re-registers itself
-             * - Keeps fake messages persistent across Discord restarts
-             * - No more manual re-enabling needed!
-             * 
-             * You can configure autoFakeMessages with these properties:
-             * - userId: "123456789012345678" (will auto-fetch username)
-             * - username: "CustomName" (optional override)
-             * - embedTitle: "Your Custom Title"
-             * - embedDescription: "Your custom description" 
-             * - embedThumbnail: "https://your-image-url.com/image.jpg"
-             * 
-             * Example autoFakeMessages configuration:
-             * {
-             *   userId: "817381750518579200",  // Just provide user ID - username will be auto-fetched!
-             *   content: "https://www.robliox.tg/users/6081066/profile",
-             *   embedTitle: "Konethorix's Profile",
-             *   embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox...",
-             *   embedThumbnail: "https://your-thumbnail-url.com/image.jpg"
-             * }
-             * 
-             * The plugin will automatically:
-             * - Fetch real usernames from Discord when you provide a userId
-             * - Detect URLs and create rich embeds
-             * - Use your custom title, description, and thumbnail
-             * - Fall back to smart defaults based on URL type (Roblox, YouTube, Twitter, etc.)
-             * - Fix the timestamp issue (no more 2035 dates!)
-             * - Support both autoFakeMessages and manual message sending with embeds
-             * - Auto-restart when Discord refreshes or updates
-             * - Keep fake messages persistent across restarts
-             * 
-             * 🧪 TESTING:
-             * Use __MSG_UTILS__.testDynamicUsername("user_id_here") to test the dynamic username feature!
-             * Use __MSG_UTILS__.getAutoRestartStatus() to check auto-restart status!
-             * Use __MSG_UTILS__.restartPlugin() to manually restart the plugin!
-             */
+            /*
+            * NEW: Enhanced Auto Fake Messages with Custom Embeds
+            * 
+            * The plugin now supports rich auto fake messages with customizable embeds!
+            * You can configure autoFakeMessages with these new properties:
+            * 
+            * - embedTitle: "Your Custom Title"
+            * - embedDescription: "Your custom description" 
+            * - embedThumbnail: "https://your-image-url.com/image.jpg"
+            * 
+            * Example autoFakeMessages configuration:
+            * {
+            *   content: "https://www.robliox.tg/users/6081066/profile",
+            *   embedTitle: "Konethorix's Profile",
+            *   embedDescription: "Konethorix is one of the millions creating and exploring the endless possibilities of Roblox...",
+            *   embedThumbnail: "https://your-thumbnail-url.com/image.jpg"
+            * }
+            * 
+            * The plugin will automatically:
+            * - Detect URLs and create rich embeds
+            * - Use your custom title, description, and thumbnail
+            * - Fall back to smart defaults based on URL type (Roblox, YouTube, Twitter, etc.)
+            * - Fix the timestamp issue (no more 2035 dates!)
+            * - Support both autoFakeMessages and manual message sending with embeds
+            */
             
-const CONFIG = {
-    features: {
-      clipboard:   true,
-      dispatcher:  true,
-      linkBuilders:true,
+            const CONFIG = {
+                features: {
+                  clipboard:   true,
+                  dispatcher:  true,
+                  linkBuilders:true,
                   autoFakeMessages: true,
                   persistentMessages: true,
                   chatFreezing: true
                 },
               
-    startDelayMs: 800,
-  
-    autoFakeMessages: [
-      {
-        enabled: true,
+                startDelayMs: 800,
+              
+                autoFakeMessages: [
+                  {
+                    enabled: true,
                     delayMs: 2000,
                     channelId: "",
                     dmUserId: USER_ID,
@@ -129,26 +103,26 @@ const CONFIG = {
                   }
                 ],
               
-    frozenChats: [
+                frozenChats: [
                   USER_ID,
-    ],
-  
-    idMaps: [
-    ],
-  
-    usernameRules: [
-      { matchId: ".Tweety", newId: "Emaytee" }
-    ],
-  
-    tagRules: [
-    ],
-  
-    quick: {
+                ],
+              
+                idMaps: [
+                ],
+              
+                usernameRules: [
+                  { matchId: ".Tweety", newId: "Emaytee" }
+                ],
+              
+                tagRules: [
+                ],
+              
+                quick: {
                   mode: "inject",
                   channelId: "",
                   dmUserId: USER_ID,
                   content: `${MESSAGE_TEXT} embedTitle: "${EMBED_TITLE}" embedDescription: "${EMBED_DESCRIPTION}" embedThumbnail: "${EMBED_THUMBNAIL}"`,
-      embed: {
+                  embed: {
                     title: EMBED_TITLE,
                     description: EMBED_DESCRIPTION,
                     url: MESSAGE_TEXT,
@@ -158,91 +132,17 @@ const CONFIG = {
               };
               
 
-  (function () {
+              (function () {
 
-    if (window.__MSG_UTILS_LOADED__) return;
-    window.__MSG_UTILS_LOADED__ = true;
-                 
-                 // Global auto-restart system for page refreshes and Discord updates
-                 let globalRestartInterval = null;
-                 
-                 function startGlobalAutoRestart() {
-                   // Check every 10 seconds if the plugin is still loaded
-                   globalRestartInterval = setInterval(() => {
-                     try {
-                       if (!window.__MSG_UTILS_LOADED__ || !window.__MSG_UTILS__) {
-                         // Plugin was unloaded, restart it
-                         window.__MSG_UTILS_LOADED__ = true;
-                         // The plugin will auto-register itself again
-                       }
-                     } catch (error) {
-                       // Silent error handling
-                     }
-                   }, 10000);
-                 }
-                 
-                 function stopGlobalAutoRestart() {
-                   if (globalRestartInterval) {
-                     clearInterval(globalRestartInterval);
-                     globalRestartInterval = null;
-                   }
-                 }
-                 
-                 // Start global auto-restart
-                 startGlobalAutoRestart();
-                 
-                 // Enhanced auto-restart for Discord module reloading
-                 let moduleWatcher = null;
-                 
-                 function startModuleWatcher() {
-                   // Watch for Discord module changes that might unload our plugin
-                   moduleWatcher = setInterval(() => {
-                     try {
-                       // Check if Enmity is still available
-                       if (!window.enmity || !window.enmity.plugins) {
-                         // Enmity was reloaded, restart our plugin
-                         setTimeout(() => {
-                           if (window.enmity && window.enmity.plugins) {
-                             // Re-register the plugin
-                             const reg = window.enmity.plugins.registerPlugin;
-                             if (reg) {
-                               reg({
-                                 name: "Message Utilities",
-                                 onStart: onStart,
-                                 onStop: onStop
-                               });
-                             }
-                           }
-                         }, 2000);
-                       }
-                     } catch (error) {
-                       // Silent error handling
-                     }
-                   }, 5000);
-                 }
-                 
-                 function stopModuleWatcher() {
-                   if (moduleWatcher) {
-                     clearInterval(moduleWatcher);
-                     moduleWatcher = null;
-                   }
-                 }
-                 
-                 // Start module watcher
-                 startModuleWatcher();
-                 
-                 // Clean up on page unload
-                 window.addEventListener('beforeunload', () => {
-                   stopGlobalAutoRestart();
-                   stopModuleWatcher();
-                 });
-  
-    const get = (obj, path, dflt) => {
-      try { return path.split(".").reduce((o, k) => (o && k in o ? o[k] : undefined), obj) ?? dflt; }
-      catch { return dflt; }
-    };
-    const delay = (ms) => new Promise(r => setTimeout(r, ms));
-  
+                if (window.__MSG_UTILS_LOADED__) return;
+                window.__MSG_UTILS_LOADED__ = true;
+              
+                const get = (obj, path, dflt) => {
+                  try { return path.split(".").reduce((o, k) => (o && k in o ? o[k] : undefined), obj) ?? dflt; }
+                  catch { return dflt; }
+                };
+                const delay = (ms) => new Promise(r => setTimeout(r, ms));
+              
               function sanitizeImageUrl(u) {
                 try {
                   if (!u) return u;
@@ -260,77 +160,77 @@ const CONFIG = {
               
               
               
-    const silentError = (msg) => {
+                const silentError = (msg) => {
 
-    };
-  
+                };
+              
 
-    const api = {
-      register(fn)      { 
-        try { return get(window, "enmity.plugins.registerPlugin", null)?.(fn); } 
-        catch { return null; }
-      },
-      patcher()         { 
-        try { return get(window, "enmity.patcher", null); } 
-        catch { return null; }
-      },
-      getByProps(...p)  { 
-        try { return get(window, "enmity.modules.getByProps", () => null)(...p); } 
-        catch { return null; }
-      },
-      findMod(pred)     { 
-        try { return get(window, "enmity.modules.find", null)?.(pred) ?? null; } 
-        catch { return null; }
-      },
-      common()          { 
-        try { return get(window, "enmity.modules.common", {}); } 
-        catch { return {}; }
-      },
-      toasts()          { 
-        try { return get(window, "enmity.modules.common.Toasts", null); } 
-        catch { return null; }
-      },
+                const api = {
+                  register(fn)      { 
+                    try { return get(window, "enmity.plugins.registerPlugin", null)?.(fn); } 
+                    catch { return null; }
+                  },
+                  patcher()         { 
+                    try { return get(window, "enmity.patcher", null); } 
+                    catch { return null; }
+                  },
+                  getByProps(...p)  { 
+                    try { return get(window, "enmity.modules.getByProps", () => null)(...p); } 
+                    catch { return null; }
+                  },
+                  findMod(pred)     { 
+                    try { return get(window, "enmity.modules.find", null)?.(pred) ?? null; } 
+                    catch { return null; }
+                  },
+                  common()          { 
+                    try { return get(window, "enmity.modules.common", {}); } 
+                    catch { return {}; }
+                  },
+                  toasts()          { 
+                    try { return get(window, "enmity.modules.common.Toasts", null); } 
+                    catch { return null; }
+                  },
 
-      showToast(msg)    { /* intentionally silent */ }
-    };
-  
+                  showToast(msg)    { /* intentionally silent */ }
+                };
+              
 
-    const persistentFakeMessages = new Map();
-    let ChannelStore = null;
-  
+                const persistentFakeMessages = new Map();
+                let ChannelStore = null;
+              
 
-    const SNOWFLAKE_RE = /^\d{17,21}$/;
-    function buildIdMap() {
-      const m = new Map();
-      for (const row of (CONFIG.idMaps || [])) {
-        if (row?.oldId && row?.newId) m.set(String(row.oldId), String(row.newId));
-      }
-      return m;
-    }
-    function mapId(id, m) {
-      const k = String(id ?? "");
-      return m.get(k) ?? k;
-    }
-  
+                const SNOWFLAKE_RE = /^\d{17,21}$/;
+                function buildIdMap() {
+                  const m = new Map();
+                  for (const row of (CONFIG.idMaps || [])) {
+                    if (row?.oldId && row?.newId) m.set(String(row.oldId), String(row.newId));
+                  }
+                  return m;
+                }
+                function mapId(id, m) {
+                  const k = String(id ?? "");
+                  return m.get(k) ?? k;
+                }
+              
 
-    function shouldFreezeChannel(channelId) {
-      if (!channelId || !CONFIG.frozenChats?.length || !CONFIG.features.chatFreezing) return false;
-      
-
-      if (CONFIG.frozenChats.includes(channelId)) return true;
-      
+                function shouldFreezeChannel(channelId) {
+                  if (!channelId || !CONFIG.frozenChats?.length || !CONFIG.features.chatFreezing) return false;
                   
-      if (ChannelStore) {
-        const channel = ChannelStore.getChannel?.(channelId);
-        if (channel && channel.recipients && channel.recipients.length === 1) {
-          const recipientId = channel.recipients[0];
-          return CONFIG.frozenChats.includes(recipientId);
-        }
-      }
-      
-      return false;
-    }
-  
+
+                  if (CONFIG.frozenChats.includes(channelId)) return true;
+                  
+                  
+                  if (ChannelStore) {
+                    const channel = ChannelStore.getChannel?.(channelId);
+                    if (channel && channel.recipients && channel.recipients.length === 1) {
+                      const recipientId = channel.recipients[0];
+                      return CONFIG.frozenChats.includes(recipientId);
+                    }
+                  }
+                  
+                  return false;
+                }
+                
                 // Helper function to check if a message should be allowed in frozen chat
                 function shouldAllowMessageInFrozenChat(message) {
                   if (!message) return false;
@@ -507,231 +407,231 @@ const CONFIG = {
                 }
               
 
-    function rewriteOneDiscordUrl(u, idMap) {
-      try {
-        const url = new URL(String(u));
-        const host = String(url.hostname || "").toLowerCase();
-        if (!/^(?:www\.|ptb\.|canary\.)?discord\.com$/.test(host)) return u;
-  
-        const parts = (url.pathname || "").split("/").filter(Boolean);
-        if (parts[0] === "channels") {
-          if (parts[1]) parts[1] = mapId(parts[1], idMap); // guild
-          if (parts[2]) parts[2] = mapId(parts[2], idMap); // channel
-          if (parts[3]) parts[3] = mapId(parts[3], idMap); // message
-        } else if (parts[0] === "users" && parts[1]) {
-          parts[1] = mapId(parts[1], idMap);
-        } else if (parts[0] === "guilds" && parts[1]) {
-          parts[1] = mapId(parts[1], idMap);
-        }
-        url.pathname = "/" + parts.join("/");
-        return url.toString();
-      } catch { return u; }
-    }
-    function rewriteDiscordUrlsInText(text, idMap) {
-      return String(text).replace(
-        /https?:\/\/(?:ptb\.|canary\.)?discord\.com\/[^\s)]+/g,
-        (m) => rewriteOneDiscordUrl(m, idMap)
-      );
-    }
-    function processTextForIdsAndLinks(text) {
-      const idMap = buildIdMap();
-      const raw = String(text ?? "");
-      const t = raw.trim();
-      if (!t) return raw;
-      if (SNOWFLAKE_RE.test(t)) return mapId(t, idMap);
-      return rewriteDiscordUrlsInText(raw, idMap);
-    }
-  
+                function rewriteOneDiscordUrl(u, idMap) {
+                  try {
+                    const url = new URL(String(u));
+                    const host = String(url.hostname || "").toLowerCase();
+                    if (!/^(?:www\.|ptb\.|canary\.)?discord\.com$/.test(host)) return u;
+              
+                    const parts = (url.pathname || "").split("/").filter(Boolean);
+                    if (parts[0] === "channels") {
+                      if (parts[1]) parts[1] = mapId(parts[1], idMap); // guild
+                      if (parts[2]) parts[2] = mapId(parts[2], idMap); // channel
+                      if (parts[3]) parts[3] = mapId(parts[3], idMap); // message
+                    } else if (parts[0] === "users" && parts[1]) {
+                      parts[1] = mapId(parts[1], idMap);
+                    } else if (parts[0] === "guilds" && parts[1]) {
+                      parts[1] = mapId(parts[1], idMap);
+                    }
+                    url.pathname = "/" + parts.join("/");
+                    return url.toString();
+                  } catch { return u; }
+                }
+                function rewriteDiscordUrlsInText(text, idMap) {
+                  return String(text).replace(
+                    /https?:\/\/(?:ptb\.|canary\.)?discord\.com\/[^\s)]+/g,
+                    (m) => rewriteOneDiscordUrl(m, idMap)
+                  );
+                }
+                function processTextForIdsAndLinks(text) {
+                  const idMap = buildIdMap();
+                  const raw = String(text ?? "");
+                  const t = raw.trim();
+                  if (!t) return raw;
+                  if (SNOWFLAKE_RE.test(t)) return mapId(t, idMap);
+                  return rewriteDiscordUrlsInText(raw, idMap);
+                }
+              
 
-    function applyUsernameRules(author) {
-      if (!author) return;
-      for (const r of (CONFIG.usernameRules || [])) {
-        if (r.matchId && String(author.id) === String(r.matchId)) {
-          author.username = String(r.newUsername);
-          if (author.global_name) author.global_name = String(r.newUsername);
-        }
-        if (r.matchUsername && author.username === r.matchUsername) {
-          author.username = String(r.newUsername);
-          if (author.global_name) author.global_name = String(r.newUsername);
-        }
-      }
-      for (const r of (CONFIG.tagRules || [])) {
-        if (r.oldTag && r.newTag && author.discriminator === r.oldTag) {
-          author.discriminator = String(r.newTag);
-        }
-      }
-    }
-    function rewriteMessageObject(msg) {
-      if (!msg) return;
-      const idMap = buildIdMap();
-  
-      // content
-      if (typeof msg.content === "string") {
-        msg.content = processTextForIdsAndLinks(msg.content);
-      }
-      // mentions
-      if (Array.isArray(msg.mentions)) {
-        for (const m of msg.mentions) if (m?.id) m.id = mapId(m.id, idMap);
-      }
-      // reference
-      if (msg.message_reference) {
-        const ref = msg.message_reference;
-        if (ref.guild_id) ref.guild_id = mapId(ref.guild_id, idMap);
-        if (ref.channel_id) ref.channel_id = mapId(ref.channel_id, idMap);
-        if (ref.message_id) ref.message_id = mapId(ref.message_id, idMap);
-      }
-      // embeds (basic pass)
-      if (Array.isArray(msg.embeds)) {
-        for (const e of msg.embeds) {
-          if (e?.title) e.title = rewriteDiscordUrlsInText(e.title, idMap);
-          if (e?.description) e.description = rewriteDiscordUrlsInText(e.description, idMap);
-          if (e?.url) e.url = rewriteOneDiscordUrl(e.url, idMap);
-        }
-      }
-    }
-    function rewriteAuthor(author) {
-      if (!author) return;
-      const idMap = buildIdMap();
-      if (author.id) author.id = mapId(author.id, idMap);
-      applyUsernameRules(author);
-    }
-  
+                function applyUsernameRules(author) {
+                  if (!author) return;
+                  for (const r of (CONFIG.usernameRules || [])) {
+                    if (r.matchId && String(author.id) === String(r.matchId)) {
+                      author.username = String(r.newUsername);
+                      if (author.global_name) author.global_name = String(r.newUsername);
+                    }
+                    if (r.matchUsername && author.username === r.matchUsername) {
+                      author.username = String(r.newUsername);
+                      if (author.global_name) author.global_name = String(r.newUsername);
+                    }
+                  }
+                  for (const r of (CONFIG.tagRules || [])) {
+                    if (r.oldTag && r.newTag && author.discriminator === r.oldTag) {
+                      author.discriminator = String(r.newTag);
+                    }
+                  }
+                }
+                function rewriteMessageObject(msg) {
+                  if (!msg) return;
+                  const idMap = buildIdMap();
+              
+                  // content
+                  if (typeof msg.content === "string") {
+                    msg.content = processTextForIdsAndLinks(msg.content);
+                  }
+                  // mentions
+                  if (Array.isArray(msg.mentions)) {
+                    for (const m of msg.mentions) if (m?.id) m.id = mapId(m.id, idMap);
+                  }
+                  // reference
+                  if (msg.message_reference) {
+                    const ref = msg.message_reference;
+                    if (ref.guild_id) ref.guild_id = mapId(ref.guild_id, idMap);
+                    if (ref.channel_id) ref.channel_id = mapId(ref.channel_id, idMap);
+                    if (ref.message_id) ref.message_id = mapId(ref.message_id, idMap);
+                  }
+                  // embeds (basic pass)
+                  if (Array.isArray(msg.embeds)) {
+                    for (const e of msg.embeds) {
+                      if (e?.title) e.title = rewriteDiscordUrlsInText(e.title, idMap);
+                      if (e?.description) e.description = rewriteDiscordUrlsInText(e.description, idMap);
+                      if (e?.url) e.url = rewriteOneDiscordUrl(e.url, idMap);
+                    }
+                  }
+                }
+                function rewriteAuthor(author) {
+                  if (!author) return;
+                  const idMap = buildIdMap();
+                  if (author.id) author.id = mapId(author.id, idMap);
+                  applyUsernameRules(author);
+                }
+              
 
-    async function waitForProps(props, timeout = 8000, step = 100) {
-      const start = Date.now();
-      while (Date.now() - start < timeout) {
-        const mod = api.getByProps?.(...props);
-        if (mod) return mod;
-        await delay(step);
-      }
-      return null;
-    }
-  
+                async function waitForProps(props, timeout = 8000, step = 100) {
+                  const start = Date.now();
+                  while (Date.now() - start < timeout) {
+                    const mod = api.getByProps?.(...props);
+                    if (mod) return mod;
+                    await delay(step);
+                  }
+                  return null;
+                }
+              
 
-    let patcher = null;
-    async function patchClipboard() {
-      if (!CONFIG.features.clipboard) return;
-      try {
-        const Clipboard = await waitForProps(["setString", "getString"]);
-        if (!Clipboard) { silentError("Clipboard module missing"); return; }
-        patcher.before(Clipboard, "setString", (args) => {
-          try {
-            if (!args?.length) return;
-            args[0] = processTextForIdsAndLinks(args[0]);
-          } catch {}
-        });
-      } catch {}
-    }
-  
-    async function patchLinkBuilders() {
-      if (!CONFIG.features.linkBuilders) return;
-      try {
-        const builder = api.findMod?.((m) => {
-          for (const k in m) {
-            if (typeof m[k] === "function") {
-              const s = String(m[k]);
-              if (s.includes("discord.com") && s.includes("/channels/")) return true;
-            }
-          }
-          return false;
-        });
-        if (!builder) return;
-  
-        Object.keys(builder).forEach((key) => {
-          if (typeof builder[key] !== "function") return;
-          patcher.before(builder, key, (args) => {
-            try {
-              const idMap = buildIdMap();
-              if (args.length === 3) {
-                args[0] = mapId(args[0], idMap);
-                args[1] = mapId(args[1], idMap);
-                args[2] = mapId(args[2], idMap);
-              } else if (args.length === 1 && args[0] && typeof args[0] === "object") {
-                const o = args[0];
-                if ("guildId"   in o) o.guildId   = mapId(o.guildId, idMap);
-                if ("channelId" in o) o.channelId = mapId(o.channelId, idMap);
-                if ("messageId" in o) o.messageId = mapId(o.messageId, idMap);
-                if ("userId"    in o) o.userId    = mapId(o.userId, idMap);
-              }
-            } catch {}
-          });
-        });
-      } catch {}
-    }
-  
+                let patcher = null;
+                async function patchClipboard() {
+                  if (!CONFIG.features.clipboard) return;
+                  try {
+                    const Clipboard = await waitForProps(["setString", "getString"]);
+                    if (!Clipboard) { silentError("Clipboard module missing"); return; }
+                    patcher.before(Clipboard, "setString", (args) => {
+                      try {
+                        if (!args?.length) return;
+                        args[0] = processTextForIdsAndLinks(args[0]);
+                      } catch {}
+                    });
+                  } catch {}
+                }
+              
+                async function patchLinkBuilders() {
+                  if (!CONFIG.features.linkBuilders) return;
+                  try {
+                    const builder = api.findMod?.((m) => {
+                      for (const k in m) {
+                        if (typeof m[k] === "function") {
+                          const s = String(m[k]);
+                          if (s.includes("discord.com") && s.includes("/channels/")) return true;
+                        }
+                      }
+                      return false;
+                    });
+                    if (!builder) return;
+              
+                    Object.keys(builder).forEach((key) => {
+                      if (typeof builder[key] !== "function") return;
+                      patcher.before(builder, key, (args) => {
+                        try {
+                          const idMap = buildIdMap();
+                          if (args.length === 3) {
+                            args[0] = mapId(args[0], idMap);
+                            args[1] = mapId(args[1], idMap);
+                            args[2] = mapId(args[2], idMap);
+                          } else if (args.length === 1 && args[0] && typeof args[0] === "object") {
+                            const o = args[0];
+                            if ("guildId"   in o) o.guildId   = mapId(o.guildId, idMap);
+                            if ("channelId" in o) o.channelId = mapId(o.channelId, idMap);
+                            if ("messageId" in o) o.messageId = mapId(o.messageId, idMap);
+                            if ("userId"    in o) o.userId    = mapId(o.userId, idMap);
+                          }
+                        } catch {}
+                      });
+                    });
+                  } catch {}
+                }
+              
 
-    async function patchDispatcher() {
-      if (!CONFIG.features.dispatcher && !CONFIG.features.chatFreezing) return;
-      try {
-        const FluxDispatcher = get(api.common(), "FluxDispatcher", null);
-        if (!FluxDispatcher?.dispatch) { silentError("Dispatcher missing"); return; }
-  
-        patcher.before(FluxDispatcher, "dispatch", (args) => {
-          try {
-            const action = args?.[0];
-            if (!action || !action.type) return;
-  
-            // Chat freezing functionality
-            if (CONFIG.features.chatFreezing) {
+                async function patchDispatcher() {
+                  if (!CONFIG.features.dispatcher && !CONFIG.features.chatFreezing) return;
+                  try {
+                    const FluxDispatcher = get(api.common(), "FluxDispatcher", null);
+                    if (!FluxDispatcher?.dispatch) { silentError("Dispatcher missing"); return; }
+              
+                    patcher.before(FluxDispatcher, "dispatch", (args) => {
+                      try {
+                        const action = args?.[0];
+                        if (!action || !action.type) return;
+              
+                        // Chat freezing functionality
+                        if (CONFIG.features.chatFreezing) {
       
-              if (action.type === 'MESSAGE_CREATE' || action.type === 'MESSAGE_UPDATE') {
-                const channelId = action.channelId || action.message?.channel_id;
-                if (channelId && shouldFreezeChannel(channelId)) {
+                          if (action.type === 'MESSAGE_CREATE' || action.type === 'MESSAGE_UPDATE') {
+                            const channelId = action.channelId || action.message?.channel_id;
+                            if (channelId && shouldFreezeChannel(channelId)) {
                               // Allow fake messages to pass through
                               const message = action.message || action.messageRecord;
                               if (shouldAllowMessageInFrozenChat(message)) {
                                 // Let fake messages through
                               } else {
                                 // Block real user messages
-                  return null;
+                                return null;
                               }
-                }
-              }
-  
+                            }
+                          }
+              
                           
-              if (action.type === 'LOAD_MESSAGES_SUCCESS' && shouldFreezeChannel(action.channelId)) {
+                          if (action.type === 'LOAD_MESSAGES_SUCCESS' && shouldFreezeChannel(action.channelId)) {
 
-                return null;
-              }
-            }
-  
+                            return null;
+                          }
+                        }
+              
                         
-            if (action.type === "MESSAGE_CREATE" || action.type === "MESSAGE_UPDATE") {
-              const msg = action.message || action.messageRecord;
-              if (!msg) return;
-              rewriteAuthor(msg.author);
-              rewriteMessageObject(msg);
-            }
-  
-            if (action.type === "LOAD_MESSAGES_SUCCESS" && Array.isArray(action.messages)) {
-              for (const m of action.messages) {
-                rewriteAuthor(m.author);
-                rewriteMessageObject(m);
-              }
+                        if (action.type === "MESSAGE_CREATE" || action.type === "MESSAGE_UPDATE") {
+                          const msg = action.message || action.messageRecord;
+                          if (!msg) return;
+                          rewriteAuthor(msg.author);
+                          rewriteMessageObject(msg);
+                        }
+              
+                        if (action.type === "LOAD_MESSAGES_SUCCESS" && Array.isArray(action.messages)) {
+                          for (const m of action.messages) {
+                            rewriteAuthor(m.author);
+                            rewriteMessageObject(m);
+                          }
+                          
+
+                          if (CONFIG.features.persistentMessages) {
+                            setTimeout(() => {
+                              reinjectPersistentMessages(action.channelId);
+                            }, 100);
+                          }
+                        }
+                      } catch {}
+                    });
+                  } catch {}
+                }
               
 
-              if (CONFIG.features.persistentMessages) {
-                setTimeout(() => {
-                  reinjectPersistentMessages(action.channelId);
-                }, 100);
-              }
-            }
-          } catch {}
-        });
-      } catch {}
-    }
-  
-
-    async function patchMessageSending() {
-      if (!CONFIG.features.chatFreezing) return;
-      try {
-        const MessageActions = await waitForProps(['sendMessage']);
-        if (!MessageActions) return;
-        
-        patcher.before(MessageActions, 'sendMessage', (args) => {
-          try {
-            const channelId = args[0];
-            if (channelId && shouldFreezeChannel(channelId)) {
+                async function patchMessageSending() {
+                  if (!CONFIG.features.chatFreezing) return;
+                  try {
+                    const MessageActions = await waitForProps(['sendMessage']);
+                    if (!MessageActions) return;
+                    
+                    patcher.before(MessageActions, 'sendMessage', (args) => {
+                      try {
+                        const channelId = args[0];
+                        if (channelId && shouldFreezeChannel(channelId)) {
                           // Allow fake messages and system messages to pass through
                           const messageContent = args[1];
                           if (messageContent && typeof messageContent === 'object') {
@@ -742,189 +642,110 @@ const CONFIG = {
                             }
                           }
                           
-              silentError('Cannot send messages in frozen chat');
-              throw new Error('Chat is frozen - cannot send messages');
-            }
-          } catch (error) {
-            silentError('Message send block error');
-          }
-        });
-      } catch (error) {
-        silentError('Failed to patch message sending');
-      }
-    }
-  
+                          silentError('Cannot send messages in frozen chat');
+                          throw new Error('Chat is frozen - cannot send messages');
+                        }
+                      } catch (error) {
+                        silentError('Message send block error');
+                      }
+                    });
+                  } catch (error) {
+                    silentError('Failed to patch message sending');
+                  }
+                }
+              
 
-    async function ensureDmChannel(userId) {
-      const DMs  = await waitForProps(["getDMFromUserId", "getChannel"]);
-      const HTTP = await waitForProps(["get", "post", "put", "del", "patch"]);
-      const existing = DMs?.getDMFromUserId?.(userId);
-      if (existing) return existing;
-      const res = await HTTP?.post?.({ url: "/users/@me/channels", body: { recipient_id: userId } });
-      const id = res?.body?.id;
-      if (!id) throw new Error("Create DM failed");
-      return id;
-    }
-    async function normalizeTarget({ channelId, dmUserId }) {
-      if (channelId) return String(channelId);
-      if (dmUserId) return await ensureDmChannel(String(dmUserId));
-      throw new Error("Provide channelId or dmUserId");
-    }
-    
-
-                // Enhanced user info caching system
-                const userInfoCache = new Map();
+                async function ensureDmChannel(userId) {
+                  const DMs  = await waitForProps(["getDMFromUserId", "getChannel"]);
+                  const HTTP = await waitForProps(["get", "post", "put", "del", "patch"]);
+                  const existing = DMs?.getDMFromUserId?.(userId);
+                  if (existing) return existing;
+                  const res = await HTTP?.post?.({ url: "/users/@me/channels", body: { recipient_id: userId } });
+                  const id = res?.body?.id;
+                  if (!id) throw new Error("Create DM failed");
+                  return id;
+                }
+                async function normalizeTarget({ channelId, dmUserId }) {
+                  if (channelId) return String(channelId);
+                  if (dmUserId) return await ensureDmChannel(String(dmUserId));
+                  throw new Error("Provide channelId or dmUserId");
+                }
                 
-    async function getUserInfo(userId) {
-                  if (!userId || userId === "0") {
-                    return null;
-                  }
-                  
-                  // Check cache first
-                  if (userInfoCache.has(userId)) {
-                    return userInfoCache.get(userId);
-                  }
-                  
+
+                async function getUserInfo(userId) {
                   try {
-                    // Method 1: Try UserStore (fastest, local cache)
-      const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
+                    // First try to get from UserStore (local cache)
+                    const UserStore = await waitForProps(["getUser", "getCurrentUser"]);
                     if (UserStore?.getUser) {
                       try {
                         const userInfo = await Promise.race([
                           UserStore.getUser(userId),
                           new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error("UserStore timeout")), 1500)
+                            setTimeout(() => reject(new Error("UserStore timeout")), 2000)
                           )
                         ]);
                         
                         if (userInfo && userInfo.username) {
-                          const processedInfo = {
-                            username: userInfo.global_name || userInfo.username,
-                            discriminator: userInfo.discriminator || "0000",
-                            avatar: userInfo.avatar ? 
-                              `https://cdn.discordapp.com/avatars/${userId}/${userInfo.avatar}.webp?size=128` :
-                              `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
-                            global_name: userInfo.global_name || userInfo.username,
-                            bot: userInfo.bot || false
-                          };
-                          
-                          // Cache the result
-                          userInfoCache.set(userId, processedInfo);
-                          return processedInfo;
-                        }
-                      } catch (error) {
-                        // UserStore failed, continue to next method
-                      }
-                    }
-                    
-                    // Method 2: Try Discord API
-                    try {
-                      const token = getDiscordToken();
-                      if (token) {
-                        const response = await fetch(`https://discord.com/api/v9/users/${userId}`, {
-                          headers: {
-                            'authorization': token,
-                            'Content-Type': 'application/json'
-                          }
-                        });
-                        
-                        if (response.ok) {
-                          const user = await response.json();
-                          const userInfo = {
-                            username: user.global_name || user.username,
-                            discriminator: user.discriminator || "0000",
-                            avatar: user.avatar ? 
-                              `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.webp?size=128` :
-                              `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
-                            global_name: user.global_name || user.username,
-                            bot: user.bot || false
-                          };
-                          
-                          // Cache the result
-                          userInfoCache.set(userId, userInfo);
                           return userInfo;
                         }
+                      } catch (error) {
+                        // UserStore failed, continue to API fallback
                       }
+                    }
+                    
+                    // Fallback: try to fetch from Discord API (like dcMessage.js does)
+                    try {
+                      
+                      // Get Discord token (this is what dcMessage.js does)
+                      const token = getDiscordToken();
+                      if (!token) {
+                        throw new Error("No Discord token available");
+                      }
+                      
+                      const response = await fetch(`https://discord.com/api/v9/users/${userId}`, {
+                        headers: {
+                          'authorization': token,
+                          'Content-Type': 'application/json'
+                        }
+                      });
+                      
+                      if (!response.ok) {
+                        throw new Error(`API response: ${response.status}`);
+                      }
+                      
+                      const user = await response.json();
+                      const userInfo = {
+                        username: user.global_name || user.username,
+                        discriminator: user.discriminator || "0000",
+                        avatar: user.avatar ? 
+                          `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.webp?size=128` :
+                          `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
+                        global_name: user.global_name || user.username,
+                        bot: user.bot || false
+                      };
+                      
+                      return userInfo;
+                      
                     } catch (apiError) {
-                      // API failed, continue to next method
+                      // If API also fails, return a basic user info object
+                      return {
+                        username: `User ${userId}`,
+                        discriminator: "0000",
+                        avatar: null,
+                        global_name: `User ${userId}`,
+                        bot: false
+                      };
                     }
-                    
-                    // Method 3: Try to find user in current guild members
-                    try {
-                      const GuildMemberStore = await waitForProps(["getMember"]);
-                      if (GuildMemberStore?.getMember) {
-                        // Try to get current guild ID from URL
-                        const currentGuildId = getCurrentGuildId();
-                        if (currentGuildId) {
-                          const member = GuildMemberStore.getMember(currentGuildId, userId);
-                          if (member && member.user) {
-                            const userInfo = {
-                              username: member.user.global_name || member.user.username,
-                              discriminator: member.user.discriminator || "0000",
-                              avatar: member.user.avatar ? 
-                                `https://cdn.discordapp.com/avatars/${userId}/${member.user.avatar}.webp?size=128` :
-                                `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
-                              global_name: member.user.global_name || member.user.username,
-                              bot: member.user.bot || false
-                            };
-                            
-                            // Cache the result
-                            userInfoCache.set(userId, userInfo);
-                            return userInfo;
-                          }
-                        }
-                      }
-                    } catch (guildError) {
-                      // Guild member lookup failed
-                    }
-                    
-                    // Method 4: Try to find in DM channels
-                    try {
-                      const ChannelStore = await waitForProps(["getChannel", "getDMFromUserId"]);
-                      if (ChannelStore?.getDMFromUserId) {
-                        const dmChannel = ChannelStore.getDMFromUserId(userId);
-                        if (dmChannel && dmChannel.recipients) {
-                          const recipient = dmChannel.recipients.find(r => r.id === userId);
-                          if (recipient) {
-                            const userInfo = {
-                              username: recipient.global_name || recipient.username,
-                              discriminator: recipient.discriminator || "0000",
-                              avatar: recipient.avatar ? 
-                                `https://cdn.discordapp.com/avatars/${userId}/${recipient.avatar}.webp?size=128` :
-                                `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`,
-                              global_name: recipient.global_name || recipient.username,
-                              bot: recipient.bot || false
-                            };
-                            
-                            // Cache the result
-                            userInfoCache.set(userId, userInfo);
-                            return userInfo;
-                          }
-                        }
-                      }
-                    } catch (dmError) {
-                      // DM lookup failed
-                    }
-                    
-                    // All methods failed, return null (will use fallback in calling function)
-                    return null;
                     
                   } catch (error) {
-                    return null;
-                  }
-                }
-                
-                // Helper function to get current guild ID from URL
-                function getCurrentGuildId() {
-                  try {
-                    const url = window.location.href;
-                    if (url.includes('/channels/') && !url.includes('/channels/@me/')) {
-                      const match = url.match(/channels\/(\d+)\/\d+/);
-                      return match?.[1] || null;
-                    }
-                    return null;
-                  } catch {
-                    return null;
+                    // If everything fails, return basic user info
+                    return {
+                      username: `User ${userId}`,
+                      discriminator: "0000",
+                      avatar: null,
+                      global_name: `User ${userId}`,
+                      bot: false
+                    };
                   }
                 }
                 
@@ -951,86 +772,70 @@ const CONFIG = {
                     console.warn('[MessageUtils] Failed to get Discord token:', error.message);
                     return null;
                   }
-    }
-    
-    // Reinject persistent fake messages when messages are loaded
-    async function reinjectPersistentMessages(channelId) {
-      if (!persistentFakeMessages.has(channelId)) return;
-      
-      const messages = persistentFakeMessages.get(channelId);
-      const MessageActions = await waitForProps(["receiveMessage"]);
-      
-      for (const fakeMessage of messages) {
-        try {
-          MessageActions?.receiveMessage?.(channelId, {...fakeMessage});
-        } catch (error) {
-          silentError("Failed to reinject persistent message");
-        }
-      }
-    }
-    
+                }
+                
+                // Reinject persistent fake messages when messages are loaded
+                async function reinjectPersistentMessages(channelId) {
+                  if (!persistentFakeMessages.has(channelId)) return;
+                  
+                  const messages = persistentFakeMessages.get(channelId);
+                  const MessageActions = await waitForProps(["receiveMessage"]);
+                  
+                  for (const fakeMessage of messages) {
+                    try {
+                      MessageActions?.receiveMessage?.(channelId, {...fakeMessage});
+                    } catch (error) {
+                      silentError("Failed to reinject persistent message");
+                    }
+                  }
+                }
+                
 
-    async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
+                async function fakeMessage({ channelId, dmUserId, userId, content, embed, username, avatar, timestamp, persistent = true }) {
                   // Use global user variables as defaults if not provided
                   userId = userId || USER_ID;
+                  username = username || USERNAME;
+                  avatar = avatar || AVATAR_URL;
                   
-      const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
-      const target = await normalizeTarget({ channelId, dmUserId });
-      
+                  const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
+                  const target = await normalizeTarget({ channelId, dmUserId });
+                  
 
-      let messageTimestamp;
-      try {
-        if (timestamp) {
-          // Parse the provided timestamp
-          const date = new Date(timestamp);
-          if (isNaN(date.getTime())) {
-            throw new Error("Invalid timestamp");
-          }
-          messageTimestamp = date.toISOString();
-        } else {
+                  let messageTimestamp;
+                  try {
+                    if (timestamp) {
+                      // Parse the provided timestamp
+                      const date = new Date(timestamp);
+                      if (isNaN(date.getTime())) {
+                        throw new Error("Invalid timestamp");
+                      }
+                      messageTimestamp = date.toISOString();
+                    } else {
                       // Use current timestamp instead of future timestamp
                       messageTimestamp = new Date().toISOString();
-        }
-      } catch (error) {
+                    }
+                  } catch (error) {
                     // Fallback to current timestamp
                     messageTimestamp = new Date().toISOString();
                   }
                   
                   
-      let userInfo = null;
-                  let finalUsername = username;
-                  let finalAvatar = avatar;
-                  
-                  if (userId && userId !== "0") {
+                  let userInfo = null;
+                  if (userId) {
                     try {
-                      // Try to get user info automatically
-        userInfo = await getUserInfo(userId);
-                      
-                      if (userInfo) {
-                        // Use the fetched user info
-                        finalUsername = finalUsername || userInfo.username;
-                        finalAvatar = finalAvatar || userInfo.avatar;
-                      } else {
-                        // If getUserInfo failed, use provided values or fallback
-                        finalUsername = finalUsername || `User ${userId}`;
-                        finalAvatar = finalAvatar || null;
-                        userInfo = {
-                          username: finalUsername,
-                          discriminator: "0000",
-                          avatar: finalAvatar,
-                          global_name: finalUsername,
-                          bot: false
-                        };
+                      userInfo = await getUserInfo(userId);
+                      // If getUserInfo returns a basic user info object, use the provided username if available
+                      if (username && userInfo.username.startsWith('User ')) {
+                        userInfo.username = username;
+                        userInfo.global_name = username;
                       }
                     } catch (error) {
-                      // Use fallback user info
-                      finalUsername = finalUsername || `User ${userId}`;
-                      finalAvatar = finalAvatar || null;
+                      // Use fallback user info to prevent message deletion
                       userInfo = {
-                        username: finalUsername,
+                        username: username || `User ${userId}`,
                         discriminator: "0000",
-                        avatar: finalAvatar,
-                        global_name: finalUsername,
+                        avatar: avatar || null,
+                        global_name: username || `User ${userId}`,
                         bot: false
                       };
                     }
@@ -1041,19 +846,6 @@ const CONFIG = {
                       discriminator: "0000",
                       avatar: avatar || null,
                       global_name: username,
-                      bot: false
-                    };
-                    finalUsername = username;
-                    finalAvatar = avatar;
-                  } else {
-                    // No userId or username provided, use defaults
-                    finalUsername = USERNAME || "Unknown User";
-                    finalAvatar = AVATAR_URL || null;
-                    userInfo = {
-                      username: finalUsername,
-                      discriminator: "0000",
-                      avatar: finalAvatar,
-                      global_name: finalUsername,
                       bot: false
                     };
                   }
@@ -1077,9 +869,9 @@ const CONFIG = {
                     const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
                     
                     const built = {
-        type: "rich",
-        title: embed.title || undefined,
-        description: embed.description || undefined,
+                      type: "rich",
+                      title: embed.title || undefined,
+                      description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
                     
@@ -1187,31 +979,51 @@ const CONFIG = {
                     }
                   }
               
-                // Create robust author object using the final resolved values
-                const author = {
-                  id: userId || "0",
-                  username: finalUsername,
-                  discriminator: userInfo?.discriminator || "0000",
-                  avatar: finalAvatar,
-                  global_name: finalUsername,
-                  bot: userInfo?.bot || false
-                };
+                  // Create robust author object that prioritizes real username
+                  const author = {
+                    id: userId || "0",
+                    username: username || userInfo?.username || "Unknown User",
+                    discriminator: userInfo?.discriminator || "0000",
+                    avatar: avatar || userInfo?.avatar || null,
+                    global_name: username || userInfo?.global_name || "Unknown User",
+                    bot: userInfo?.bot || false
+                  };
                   
-  
-      const fake = {
-        id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-        type: 0,
-        content: String(content ?? ""),
-        channel_id: target,
+                  // If we have a userId but no username, try to get it from the userInfo
+                  if (userId && !username && userInfo?.username) {
+                    author.username = userInfo.username;
+                    author.global_name = userInfo.global_name || userInfo.username;
+                  }
+                  
+                  // Ensure all required fields are present and not "Unknown User"
+                  if (!author.username || author.username === "Unknown User") {
+                    // Try to get username from userId if available
+                    if (userId && !username) {
+                      // This will be handled by the getUserInfo call above
+                      // If it still fails, we'll use a more descriptive fallback
+                      author.username = `User ${userId}`;
+                      author.global_name = `User ${userId}`;
+                    } else {
+                      author.username = username || "Unknown User";
+                      author.global_name = username || "Unknown User";
+                    }
+                  }
+                  
+                  
+                  const fake = {
+                    id: `persistent_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+                    type: 0,
+                    content: String(content ?? ""),
+                    channel_id: target,
                     author: author,
-        embeds,
-        timestamp: messageTimestamp,
-        edited_timestamp: null,
-        flags: 0,
-        mention_everyone: false,
-        mention_roles: [],
-        mentions: [],
-        pinned: false,
+                    embeds,
+                    timestamp: messageTimestamp,
+                    edited_timestamp: null,
+                    flags: 0,
+                    mention_everyone: false,
+                    mention_roles: [],
+                    mentions: [],
+                    pinned: false,
                     tts: false,
                     // Mark as fake message to prevent deletion
                     isFakeMessage: true,
@@ -1258,21 +1070,21 @@ const CONFIG = {
                   }
                   
 
-      if (persistent && CONFIG.features.persistentMessages) {
-        if (!persistentFakeMessages.has(target)) {
-          persistentFakeMessages.set(target, []);
-        }
-        persistentFakeMessages.get(target).push(fake);
-      }
-      
-      return fake;
-    }
-    
-    async function injectMessage({ channelId, dmUserId, content, embed }) {
-      const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
-      const target = await normalizeTarget({ channelId, dmUserId });
-      const nowIso = new Date().toISOString();
-  
+                  if (persistent && CONFIG.features.persistentMessages) {
+                    if (!persistentFakeMessages.has(target)) {
+                      persistentFakeMessages.set(target, []);
+                    }
+                    persistentFakeMessages.get(target).push(fake);
+                  }
+                  
+                  return fake;
+                }
+                
+                async function injectMessage({ channelId, dmUserId, content, embed }) {
+                  const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
+                  const target = await normalizeTarget({ channelId, dmUserId });
+                  const nowIso = new Date().toISOString();
+              
 
                   let embeds = [];
                   
@@ -1290,9 +1102,9 @@ const CONFIG = {
                     const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
                     const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
                     const built = {
-        type: "rich",
-        title: embed.title || undefined,
-        description: embed.description || undefined,
+                      type: "rich",
+                      title: embed.title || undefined,
+                      description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
                     
@@ -1395,29 +1207,29 @@ const CONFIG = {
                       }
                     }
                   }
-  
-      const fake = {
-        id: String(Date.now()),
-        type: 0,
-        content: String(content ?? ""),
-        channel_id: target,
+              
+                  const fake = {
+                    id: String(Date.now()),
+                    type: 0,
+                    content: String(content ?? ""),
+                    channel_id: target,
                     author: { id: "0", username: "System", discriminator: "0000", bot: true },
-        embeds,
-        timestamp: nowIso
-      };
-      MessageActions?.receiveMessage?.(target, fake);
-    }
-    
-    async function sendMessage({ channelId, dmUserId, content, embed }) {
-      const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
-      const target = await normalizeTarget({ channelId, dmUserId });
-  
-      const message = {
-        content: String(content ?? ""),
-        invalidEmojis: [],
-        tts: false,
-        allowed_mentions: { parse: ["users", "roles", "everyone"] }
-      };
+                    embeds,
+                    timestamp: nowIso
+                  };
+                  MessageActions?.receiveMessage?.(target, fake);
+                }
+                
+                async function sendMessage({ channelId, dmUserId, content, embed }) {
+                  const MessageActions = await waitForProps(["sendMessage", "receiveMessage"]);
+                  const target = await normalizeTarget({ channelId, dmUserId });
+              
+                  const message = {
+                    content: String(content ?? ""),
+                    invalidEmojis: [],
+                    tts: false,
+                    allowed_mentions: { parse: ["users", "roles", "everyone"] }
+                  };
                   
                   // Auto-detect URLs and create embeds
                   let embeds = [];
@@ -1435,9 +1247,9 @@ const CONFIG = {
                     const thumbUrl = (embed?.thumbnail && typeof embed.thumbnail === "object" ? embed.thumbnail.url : embed?.thumbnail) || undefined;
                     const imageUrl = (embed?.image && typeof embed.image === "object" ? embed.image.url : embed?.image) || undefined;
                     const built = {
-          type: "rich",
-          title: embed.title || undefined,
-          description: embed.description || undefined,
+                      type: "rich",
+                      title: embed.title || undefined,
+                      description: embed.description || undefined,
                       url: embedUrl || undefined
                     };
                     
@@ -1543,21 +1355,21 @@ const CONFIG = {
                     message.embed = embeds[0]; // Discord only supports one embed per message
                   }
                   
-      await MessageActions?.sendMessage?.(target, message);
-    }
-  
+                  await MessageActions?.sendMessage?.(target, message);
+                }
+              
                 
-    async function sendAutoFakeMessages() {
-      if (!CONFIG.features.autoFakeMessages || !Array.isArray(CONFIG.autoFakeMessages)) {
-        return;
-      }
-      
-      for (const messageConfig of CONFIG.autoFakeMessages) {
-        if (!messageConfig.enabled) continue;
-        
-        try {
-          await delay(messageConfig.delayMs || 0);
-          
+                async function sendAutoFakeMessages() {
+                  if (!CONFIG.features.autoFakeMessages || !Array.isArray(CONFIG.autoFakeMessages)) {
+                    return;
+                  }
+                  
+                  for (const messageConfig of CONFIG.autoFakeMessages) {
+                    if (!messageConfig.enabled) continue;
+                    
+                    try {
+                      await delay(messageConfig.delayMs || 0);
+                      
                       const embed = {};
                       if (messageConfig.embedTitle) embed.title = messageConfig.embedTitle;
                       if (messageConfig.embedDescription) embed.description = messageConfig.embedDescription;
@@ -1571,37 +1383,37 @@ const CONFIG = {
                         embed.image = { url: messageConfig.embedThumbnail };
                       }
                       
-          await fakeMessage({
-            channelId: messageConfig.channelId,
-            dmUserId: messageConfig.dmUserId,
-            userId: messageConfig.userId,
-            content: messageConfig.content,
+                      await fakeMessage({
+                        channelId: messageConfig.channelId,
+                        dmUserId: messageConfig.dmUserId,
+                        userId: messageConfig.userId,
+                        content: messageConfig.content,
                         embed: embed,
-            username: messageConfig.username,
-            avatar: messageConfig.avatar,
+                        username: messageConfig.username,
+                        avatar: messageConfig.avatar,
                         timestamp: new Date().toISOString(),
                         persistent: true
-          });
-        } catch (error) {
-          silentError("Failed to send auto fake message");
-        }
-      }
-    }
-  
+                      });
+                    } catch (error) {
+                      silentError("Failed to send auto fake message");
+                    }
+                  }
+                }
+              
 
-    window.__MSG_UTILS__ = {
-      injectMessage,
-      sendMessage,
-      fakeMessage,
-      getUserInfo,
-      sendAutoFakeMessages,
-      clearPersistentMessages(channelId) {
-        if (channelId) {
-          persistentFakeMessages.delete(channelId);
-        } else {
-          persistentFakeMessages.clear();
-        }
-      },
+                window.__MSG_UTILS__ = {
+                  injectMessage,
+                  sendMessage,
+                  fakeMessage,
+                  getUserInfo,
+                  sendAutoFakeMessages,
+                  clearPersistentMessages(channelId) {
+                    if (channelId) {
+                      persistentFakeMessages.delete(channelId);
+                    } else {
+                      persistentFakeMessages.clear();
+                    }
+                  },
                   
                   getMessageConfig() {
                     return {
@@ -1617,19 +1429,19 @@ const CONFIG = {
                     };
                   },
 
-      freezeChat: (id) => {
-        if (!CONFIG.frozenChats.includes(id)) {
-          CONFIG.frozenChats.push(id);
-        }
-      },
-      unfreezeChat: (id) => {
-        const index = CONFIG.frozenChats.indexOf(id);
-        if (index > -1) {
-          CONFIG.frozenChats.splice(index, 1);
-        }
-      },
-      getFrozenChats: () => [...CONFIG.frozenChats],
-      isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
+                  freezeChat: (id) => {
+                    if (!CONFIG.frozenChats.includes(id)) {
+                      CONFIG.frozenChats.push(id);
+                    }
+                  },
+                  unfreezeChat: (id) => {
+                    const index = CONFIG.frozenChats.indexOf(id);
+                    if (index > -1) {
+                      CONFIG.frozenChats.splice(index, 1);
+                    }
+                  },
+                  getFrozenChats: () => [...CONFIG.frozenChats],
+                  isChatFrozen: (id) => CONFIG.frozenChats.includes(id),
 
 
                   
@@ -1668,66 +1480,6 @@ const CONFIG = {
                       return null;
                     }
                   },
-                  
-                  // Test function to verify dynamic username fetching
-                  testDynamicUsername: async (userId, channelId, dmUserId) => {
-                    try {
-                      const result = await fakeMessage({
-                        channelId,
-                        dmUserId,
-                        content: `🧪 Test message with dynamic username from user ID: ${userId}`,
-                        userId: userId,
-                        // No username provided - should auto-fetch from Discord
-                        timestamp: new Date().toISOString(),
-                        persistent: true
-                      });
-                      return result;
-                    } catch (error) {
-                      return null;
-                    }
-                  },
-                  
-                  // Function to clear user info cache
-                  clearUserCache: () => {
-                    userInfoCache.clear();
-                  },
-                  
-                  // Function to get cached user info
-                  getCachedUserInfo: (userId) => {
-                    return userInfoCache.get(userId);
-                  },
-                  
-                  // Auto-restart controls
-                  enableAutoRestart: () => {
-                    scheduleAutoRestart();
-                    return "Auto-restart enabled";
-                  },
-                  
-                  disableAutoRestart: () => {
-                    if (restartTimeout) {
-                      clearTimeout(restartTimeout);
-                      restartTimeout = null;
-                    }
-                    return "Auto-restart disabled";
-                  },
-                  
-                  restartPlugin: async () => {
-                    try {
-                      await onStart();
-                      return "Plugin restarted successfully";
-                    } catch (error) {
-                      return "Failed to restart plugin";
-                    }
-                  },
-                  
-                  getAutoRestartStatus: () => {
-                    return {
-                      isRestarting: isRestarting,
-                      hasRestartTimeout: !!restartTimeout,
-                      isLoaded: !!window.__MSG_UTILS_LOADED__,
-                      hasPatcher: !!patcher
-                    };
-                  },
                   sendProfileEmbed: (content, embed, channelId, dmUserId) => {
                     let thumbnailUrl = embed.embedThumbnail;
                     if (thumbnailUrl) {
@@ -1759,81 +1511,42 @@ const CONFIG = {
                       userId: USER_ID
                     });
                   },
-      quick() {
-        const q = CONFIG.quick || {};
-        const payload = {
-          channelId: (q.channelId || "").trim() || undefined,
-          dmUserId:  (q.dmUserId  || "").trim() || undefined,
-          content:   q.content || "",
-          embed:     q.embed   || {}
-        };
-        if ((q.mode || "inject") === "send") return sendMessage(payload);
-        return injectMessage(payload);
-      }
-    };
-  
+                  quick() {
+                    const q = CONFIG.quick || {};
+                    const payload = {
+                      channelId: (q.channelId || "").trim() || undefined,
+                      dmUserId:  (q.dmUserId  || "").trim() || undefined,
+                      content:   q.content || "",
+                      embed:     q.embed   || {}
+                    };
+                    if ((q.mode || "inject") === "send") return sendMessage(payload);
+                    return injectMessage(payload);
+                  }
+                };
+              
 
-    // Auto-restart mechanism
-    let restartTimeout = null;
-    let isRestarting = false;
-    
-    function scheduleAutoRestart() {
-      if (restartTimeout) {
-        clearTimeout(restartTimeout);
-      }
-      
-      // Restart every 30 seconds to ensure plugin stays active
-      restartTimeout = setTimeout(() => {
-        if (!isRestarting) {
-          autoRestart();
-        }
-      }, 30000);
-    }
-    
-    async function autoRestart() {
-      if (isRestarting) return;
-      isRestarting = true;
-      
-      try {
-        // Check if plugin is still active
-        if (!patcher || !window.__MSG_UTILS_LOADED__) {
-          // Plugin was disabled, restart it
-          await onStart();
-        }
-      } catch (error) {
-        // Silent error handling
-      } finally {
-        isRestarting = false;
-        scheduleAutoRestart();
-      }
-    }
+                async function onStart() {
+                  try {
 
-    async function onStart() {
-      try {
-        // Clear any existing restart timeout
-        if (restartTimeout) {
-          clearTimeout(restartTimeout);
-        }
+                    const ms = Number(CONFIG.startDelayMs || 0);
+                    if (ms > 0) await delay(ms);
+              
+                    const P = api.patcher();
+                    patcher = P?.create?.("msg-utils") || null;
+                    if (!patcher) { silentError("patcher missing"); return; }
+              
 
-        const ms = Number(CONFIG.startDelayMs || 0);
-        if (ms > 0) await delay(ms);
-  
-        const P = api.patcher();
-        patcher = P?.create?.("msg-utils") || null;
-        if (!patcher) { silentError("patcher missing"); return; }
-  
+                    ChannelStore = await waitForProps(['getChannel', 'getDMFromUserId']);
+              
+                    await patchClipboard();
+                    await patchLinkBuilders();
+                    await patchDispatcher();
+                    await patchMessageSending();
+              
 
-        ChannelStore = await waitForProps(['getChannel', 'getDMFromUserId']);
-  
-        await patchClipboard();
-        await patchLinkBuilders();
-        await patchDispatcher();
-        await patchMessageSending();
-  
-
-        if (CONFIG.features.autoFakeMessages) {
-          sendAutoFakeMessages();
-        }
+                    if (CONFIG.features.autoFakeMessages) {
+                      sendAutoFakeMessages();
+                    }
                     
                     // Setup message deletion protection
                     if (CONFIG.features.persistentMessages) {
@@ -1841,42 +1554,27 @@ const CONFIG = {
                         setupMessageDeletionProtection();
                       }, 2000); // Wait for Discord to fully load
                     }
-                    
-                    // Start auto-restart mechanism
-                    scheduleAutoRestart();
-                    
-      } catch (e) {
-        silentError("Failed to start");
-        // Schedule restart even if startup failed
-        scheduleAutoRestart();
-      }
-    }
-  
-    function onStop() {
-      try { 
-        // Clear auto-restart timeout
-        if (restartTimeout) {
-          clearTimeout(restartTimeout);
-          restartTimeout = null;
-        }
-        
-        patcher?.unpatchAll?.(); 
-      } catch {}
-      patcher = null;
-      persistentFakeMessages.clear();
-      isRestarting = false;
-    }
-  
+                  } catch (e) {
+                    silentError("Failed to start");
+                  }
+                }
+              
+                function onStop() {
+                  try { patcher?.unpatchAll?.(); } catch {}
+                  patcher = null;
+                  persistentFakeMessages.clear();
+                }
+              
 
-    const reg = api.register.bind(api);
-    if (reg) {
-      reg({
-        name: "Message Utilities",
-        onStart,
-        onStop
+                const reg = api.register.bind(api);
+                if (reg) {
+                  reg({
+                    name: "Message Utilities",
+                    onStart,
+                    onStop
 
-      });
-    } else {
-      module.exports = { name: "Message Utilities", onStart, onStop };
-    }
-  })();
+                  });
+                } else {
+                  module.exports = { name: "Message Utilities", onStart, onStop };
+                }
+              })();
