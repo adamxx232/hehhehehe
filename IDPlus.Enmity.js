@@ -1872,9 +1872,6 @@ const CONFIG = {
     if (reg) {
       reg({
         name: "Message Utilities",
-        description: "sample script",
-        version: "1.0.0",
-        authors: [{ name: "You", id: USER_ID }],
         onStart,
         onStop
 
