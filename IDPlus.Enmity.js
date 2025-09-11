@@ -207,7 +207,7 @@ const CONFIG = {
                              const reg = window.enmity.plugins.registerPlugin;
                              if (reg) {
                                reg({
-                                 name: "Message Utilities",
+                                 name: "IDPlus",
                                  onStart: onStart,
                                  onStop: onStop
                                });
@@ -1871,12 +1871,12 @@ const CONFIG = {
     const reg = api.register.bind(api);
     if (reg) {
       reg({
-        name: "Message Utilities",
+        name: "IDPlus",
         onStart,
         onStop
 
       });
     } else {
-      module.exports = { name: "Message Utilities", onStart, onStop };
+      module.exports = { name: "IDPlus", onStart, onStop };
     }
   })();
