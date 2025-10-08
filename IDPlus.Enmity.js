@@ -1,11 +1,13 @@
 /**
- * IDPlus - Enhanced Message Utilities for Enmity (iOS)
- * Compatible with: Enmity db482b0, Discord 261.0, RN 0.74.5
- * TRUE PERSISTENCE - Messages survive full Discord restarts
+ * @name IDPlus
+ * @author IDPlus Team
+ * @description Enhanced message utilities with TRUE persistence across restarts
+ * @version 2.4.0
+ * @invite none
  */
 
 /* USER CONFIGURATION */
-const USER_ID = "1323760789122842735";
+const USER_ID = "384837956944527360";
 const USERNAME = "";
 const AVATAR_URL = "";
 
@@ -43,16 +45,21 @@ const CONFIG = {
       embedThumbnail: EMBED_THUMBNAIL
     }
   ],
-  frozenChats: ["1425577326661603358"],
+  frozenChats: ["1323760789122842735"],
   idMaps: [],
   usernameRules: [],
   tagRules: []
 };
 
 /* PLUGIN CODE */
-let Patcher;
-let Storage;
-let getByProps;
+const { Plugin } = require('enmity/managers/plugins');
+const { React } = require('enmity/metro/common');
+const { create } = require('enmity/patcher');
+const { getByProps } = require('enmity/metro');
+const { getStorage } = require('enmity/api/storage');
+
+const Patcher = create('IDPlus');
+const Storage = getStorage('IDPlus');
 
 let MessageActions;
 let MessageStore;
@@ -76,8 +83,6 @@ const silentError = (msg, err) => {
 };
 
 async function waitForModule(props, maxAttempts = 50) {
-  if (!getByProps) return null;
-  
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const module = getByProps(...props);
@@ -427,7 +432,6 @@ function setupMessagePersistence() {
       const [event] = args;
       if (!event || !event.type) return;
       
-      // Re-inject on channel select
       if (event.type === 'CHANNEL_SELECT') {
         const channelId = event.channelId;
         if (channelId && persistentFakeMessages.has(channelId)) {
@@ -437,7 +441,6 @@ function setupMessagePersistence() {
         }
       }
       
-      // Prevent deletion of fake messages
       if (event.type === 'MESSAGE_DELETE') {
         const messageId = event.id || event.messageId;
         if (messageId) {
@@ -445,9 +448,7 @@ function setupMessagePersistence() {
             if (!Array.isArray(messages)) return;
             const msgIndex = messages.findIndex(m => m && m.id === messageId);
             if (msgIndex !== -1) {
-              // Block the delete event for our fake messages
               args[0] = { type: 'NOOP' };
-              // Re-inject immediately
               setTimeout(() => {
                 const msg = messages[msgIndex];
                 if (FluxDispatcher && msg) {
@@ -464,7 +465,6 @@ function setupMessagePersistence() {
         }
       }
       
-      // Re-inject after message loads
       if (event.type === 'LOAD_MESSAGES_SUCCESS' || 
           event.type === 'LOAD_MESSAGES' ||
           event.type === 'LOCAL_MESSAGES_LOADED') {
@@ -476,7 +476,6 @@ function setupMessagePersistence() {
         }
       }
       
-      // Re-inject after message updates (but not for our own fake messages)
       if (event.type === 'MESSAGE_UPDATE') {
         const channelId = event.message?.channel_id;
         const messageId = event.message?.id;
@@ -486,7 +485,6 @@ function setupMessagePersistence() {
           if (Array.isArray(messages)) {
             const isFakeMessage = messages.some(m => m && m.id === messageId);
             
-            // Only reinject if this isn't one of our fake messages
             if (!isFakeMessage) {
               setTimeout(() => {
                 reinjectMessagesForChannel(channelId);
@@ -496,7 +494,6 @@ function setupMessagePersistence() {
         }
       }
       
-      // Block bulk message deletion that might affect our messages
       if (event.type === 'MESSAGE_DELETE_BULK') {
         const channelId = event.channelId;
         if (channelId && persistentFakeMessages.has(channelId)) {
@@ -507,9 +504,7 @@ function setupMessagePersistence() {
             const hasFakeMessage = messages.some(m => m && ids.includes(m.id));
             
             if (hasFakeMessage) {
-              // Block the bulk delete
               args[0] = { type: 'NOOP' };
-              // Re-inject all our messages
               setTimeout(() => {
                 reinjectMessagesForChannel(channelId);
               }, 100);
@@ -518,7 +513,6 @@ function setupMessagePersistence() {
         }
       }
       
-      // Re-inject when channel cache is updated (only current channel to avoid spam)
       if (event.type === 'CHANNEL_UPDATES' || 
           event.type === 'CACHE_LOADED' ||
           event.type === 'OVERLAY_INITIALIZE') {
@@ -820,107 +814,106 @@ function setupGlobalAPI() {
   };
 }
 
-async function onStart() {
-  try {
-    isPluginActive = true;
-    
-    if (!window.enmity) {
-      console.log('[IDPlus] Enmity not found');
-      return;
-    }
-    
-    if (!window.enmity.metro || !window.enmity.patcher || !window.enmity.api) {
-      console.log('[IDPlus] Enmity API incomplete');
-      return;
-    }
-    
-    const { getByProps: gbp } = window.enmity.metro;
-    const { create } = window.enmity.patcher;
-    const { getStorage } = window.enmity.api.storage;
-    
-    if (!gbp || !create || !getStorage) {
-      console.log('[IDPlus] Enmity functions not available');
-      return;
-    }
-    
-    getByProps = gbp;
-    Patcher = create('IDPlus');
-    Storage = getStorage('IDPlus');
-    
-    if (CONFIG.startDelayMs > 0) {
-      await delay(CONFIG.startDelayMs);
-    }
+module.exports = {
+  onStart() {
+    try {
+      isPluginActive = true;
+      
+      if (CONFIG.startDelayMs > 0) {
+        setTimeout(async () => {
+          const modulesReady = await initializeModules();
+          if (!modulesReady) {
+            console.log('[IDPlus] Failed to initialize modules');
+            return;
+          }
 
-    const modulesReady = await initializeModules();
-    if (!modulesReady) {
-      console.log('[IDPlus] Failed to initialize modules');
-      return;
+          await loadPersistentMessages();
+          setupGlobalAPI();
+          await patchClipboard();
+          await patchDispatcher();
+          await patchLinkBuilders();
+          setupMessagePersistence();
+          setupChatFreezing();
+          
+          if (CONFIG.features.truePersistence) {
+            startPersistenceSystem();
+          }
+
+          if (CONFIG.features.autoFakeMessages) {
+            setTimeout(() => {
+              sendAutoFakeMessages();
+            }, 500);
+          }
+
+          console.log('[IDPlus] ✅ Started successfully!');
+        }, CONFIG.startDelayMs);
+      } else {
+        initializeModules().then(async modulesReady => {
+          if (!modulesReady) {
+            console.log('[IDPlus] Failed to initialize modules');
+            return;
+          }
+
+          await loadPersistentMessages();
+          setupGlobalAPI();
+          await patchClipboard();
+          await patchDispatcher();
+          await patchLinkBuilders();
+          setupMessagePersistence();
+          setupChatFreezing();
+          
+          if (CONFIG.features.truePersistence) {
+            startPersistenceSystem();
+          }
+
+          if (CONFIG.features.autoFakeMessages) {
+            setTimeout(() => {
+              sendAutoFakeMessages();
+            }, 500);
+          }
+
+          console.log('[IDPlus] ✅ Started successfully!');
+        });
+      }
+      
+    } catch (error) {
+      silentError('Plugin start failed', error);
+      console.log('[IDPlus] ❌ Failed to start', error);
     }
+  },
 
-    await loadPersistentMessages();
-
-    setupGlobalAPI();
-
-    await patchClipboard();
-    await patchDispatcher();
-    await patchLinkBuilders();
-    
-    setupMessagePersistence();
-    setupChatFreezing();
-    
-    if (CONFIG.features.truePersistence) {
-      startPersistenceSystem();
+  onStop() {
+    try {
+      isPluginActive = false;
+      
+      if (persistenceInterval) {
+        clearInterval(persistenceInterval);
+        persistenceInterval = null;
+      }
+      
+      if (Patcher) {
+        Patcher.unpatchAll();
+      }
+      
+      userInfoCache.clear();
+      
+      if (window.__MSG_UTILS__) {
+        delete window.__MSG_UTILS__;
+      }
+      
+      console.log('[IDPlus] 👋 Stopped');
+    } catch (error) {
+      silentError('Plugin stop failed', error);
     }
+  },
 
-    if (CONFIG.features.autoFakeMessages) {
-      setTimeout(() => {
-        sendAutoFakeMessages();
-      }, 500);
-    }
-
-    console.log('[IDPlus] ✅ Started successfully!');
-    
-  } catch (error) {
-    silentError('Plugin start failed', error);
-    console.log('[IDPlus] ❌ Failed to start', error);
-  }
-}
-
-function onStop() {
-  try {
-    isPluginActive = false;
-    
-    if (persistenceInterval) {
-      clearInterval(persistenceInterval);
-      persistenceInterval = null;
-    }
-    
-    if (Patcher) {
-      Patcher.unpatchAll();
-    }
-    
-    userInfoCache.clear();
-    
-    if (window.__MSG_UTILS__) {
-      delete window.__MSG_UTILS__;
-    }
-    
-    console.log('[IDPlus] 👋 Stopped');
-  } catch (error) {
-    silentError('Plugin stop failed', error);
-  }
-}
-
-export default {
   name: 'IDPlus',
-  version: '2.3.2',
+  version: '2.4.0',
   description: 'Enhanced message utilities with TRUE persistence across restarts',
   authors: [
     {
       name: 'IDPlus',
       id: '0'
     }
-  ],
-  onStart,
-  onStop
+  ]
 };
