@@ -5,7 +5,7 @@
  */
 
 /* USER CONFIGURATION */
-const USER_ID = "384837956944527360";
+const USER_ID = "1323760789122842735";
 const USERNAME = "";
 const AVATAR_URL = "";
 
@@ -36,25 +36,23 @@ const CONFIG = {
       dmUserId: USER_ID,
       userId: MESSAGE_USER_ID,
       content: MESSAGE_TEXT,
-      username: USERNAME,
-      avatar: AVATAR_URL,
+      username: USERNAME || null,
+      avatar: AVATAR_URL || null,
       embedTitle: EMBED_TITLE,
       embedDescription: EMBED_DESCRIPTION,
       embedThumbnail: EMBED_THUMBNAIL
     }
   ],
-  frozenChats: [USER_ID],
+  frozenChats: ["1425577326661603358"],
   idMaps: [],
   usernameRules: [],
   tagRules: []
 };
 
 /* PLUGIN CODE */
-const { Plugin } = window.enmity.managers.plugins;
-const { getByProps, getByName } = window.enmity.metro;
-const { create } = window.enmity.patcher;
-const { getStorage } = window.enmity.api.storage;
-const Patcher = create('IDPlus');
+let Patcher;
+let Storage;
+let getByProps;
 
 let MessageActions;
 let MessageStore;
@@ -65,7 +63,6 @@ let FluxDispatcher;
 let SelectedChannelStore;
 let Clipboard;
 
-const Storage = getStorage('IDPlus');
 const persistentFakeMessages = new Map();
 const userInfoCache = new Map();
 let isPluginActive = false;
@@ -75,16 +72,18 @@ let currentChannel = null;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const silentError = (msg, err) => {
-  if (__DEV__) console.log(`[IDPlus] ${msg}`, err);
+  console.log(`[IDPlus] ${msg}`, err || '');
 };
 
 async function waitForModule(props, maxAttempts = 50) {
+  if (!getByProps) return null;
+  
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const module = getByProps(...props);
       if (module) return module;
     } catch (e) {
-      silentError('Module search error', e);
+      // Silent fail
     }
     await delay(100);
   }
@@ -92,26 +91,34 @@ async function waitForModule(props, maxAttempts = 50) {
 }
 
 async function savePersistentMessages() {
+  if (!Storage) return;
+  
   try {
     const messagesArray = Array.from(persistentFakeMessages.entries()).map(([channelId, messages]) => ({
       channelId,
       messages
     }));
-    await Storage.setItem('persistentMessages', JSON.stringify(messagesArray));
+    Storage.persistentMessages = JSON.stringify(messagesArray);
   } catch (error) {
     silentError('Failed to save persistent messages', error);
   }
 }
 
 async function loadPersistentMessages() {
+  if (!Storage) return;
+  
   try {
-    const saved = await Storage.getItem('persistentMessages');
-    if (saved) {
+    const saved = Storage.persistentMessages;
+    if (saved && typeof saved === 'string') {
       const messagesArray = JSON.parse(saved);
-      messagesArray.forEach(({ channelId, messages }) => {
-        persistentFakeMessages.set(channelId, messages);
-      });
-      console.log(`[IDPlus] Loaded ${messagesArray.length} channels with fake messages`);
+      if (Array.isArray(messagesArray)) {
+        messagesArray.forEach(item => {
+          if (item && item.channelId && Array.isArray(item.messages)) {
+            persistentFakeMessages.set(item.channelId, item.messages);
+          }
+        });
+        console.log(`[IDPlus] Loaded ${messagesArray.length} channels with fake messages`);
+      }
     }
   } catch (error) {
     silentError('Failed to load persistent messages', error);
@@ -128,10 +135,10 @@ async function getUserInfo(userId) {
   try {
     if (UserStore) {
       const user = UserStore.getUser?.(userId);
-      if (user) {
+      if (user && user.username) {
         const info = {
           username: user.username,
-          discriminator: user.discriminator,
+          discriminator: user.discriminator || '0000',
           avatar: user.avatar ? 
             `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.png?size=128` : 
             null,
@@ -142,14 +149,14 @@ async function getUserInfo(userId) {
       }
     }
 
-    if (RelationshipStore) {
+    if (RelationshipStore && UserStore) {
       const relationships = RelationshipStore.getRelationships?.();
       if (relationships && relationships[userId]) {
-        const user = UserStore?.getUser?.(userId);
-        if (user) {
+        const user = UserStore.getUser?.(userId);
+        if (user && user.username) {
           const info = {
             username: user.username,
-            discriminator: user.discriminator,
+            discriminator: user.discriminator || '0000',
             avatar: user.avatar ? 
               `https://cdn.discordapp.com/avatars/${userId}/${user.avatar}.png?size=128` : 
               null,
@@ -161,16 +168,16 @@ async function getUserInfo(userId) {
       }
     }
 
-    if (MessageStore) {
-      const channels = ChannelStore?.getChannels?.() || {};
+    if (MessageStore && ChannelStore) {
+      const channels = ChannelStore.getChannels?.() || {};
       for (const channelId in channels) {
         const messages = MessageStore.getMessages?.(channelId);
         if (messages && messages._array) {
           const msg = messages._array.find(m => m.author?.id === userId);
-          if (msg && msg.author) {
+          if (msg && msg.author && msg.author.username) {
             const info = {
               username: msg.author.username,
-              discriminator: msg.author.discriminator,
+              discriminator: msg.author.discriminator || '0000',
               avatar: msg.author.avatar ? 
                 `https://cdn.discordapp.com/avatars/${userId}/${msg.author.avatar}.png?size=128` : 
                 null,
@@ -190,6 +197,7 @@ async function getUserInfo(userId) {
 }
 
 function getTargetChannel(options) {
+  if (!options) return null;
   if (options.channelId) return options.channelId;
   if (options.dmUserId && ChannelStore) {
     return ChannelStore.getDMFromUserId?.(options.dmUserId);
@@ -211,18 +219,18 @@ async function injectMessage(options) {
     }
 
     const messageId = options.messageId || 
-      `fake_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      `fake_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     
     let username = options.username;
     let avatar = options.avatar;
     
-    if (!username && options.userId) {
+    if ((!username || username === '') && options.userId) {
       const userInfo = await getUserInfo(options.userId);
       username = userInfo.username;
-      if (!avatar) avatar = userInfo.avatar;
+      if (!avatar || avatar === '') avatar = userInfo.avatar;
     }
     
-    if (!username) username = 'Unknown User';
+    if (!username || username === '') username = 'Unknown User';
 
     const message = {
       id: messageId,
@@ -315,17 +323,21 @@ async function fakeMessage(options) {
 }
 
 async function reinjectMessagesForChannel(channelId) {
-  if (!persistentFakeMessages.has(channelId)) return;
+  if (!persistentFakeMessages.has(channelId) || !FluxDispatcher) return;
   
   try {
     const messages = persistentFakeMessages.get(channelId);
+    if (!Array.isArray(messages)) return;
+    
     for (const msg of messages) {
-      FluxDispatcher.dispatch({
-        type: 'MESSAGE_CREATE',
-        channelId: channelId,
-        message: msg,
-        optimistic: false
-      });
+      if (msg && msg.id) {
+        FluxDispatcher.dispatch({
+          type: 'MESSAGE_CREATE',
+          channelId: channelId,
+          message: msg,
+          optimistic: false
+        });
+      }
     }
   } catch (error) {
     silentError('Failed to reinject messages', error);
@@ -338,7 +350,7 @@ async function sendAutoFakeMessages() {
   }
 
   for (const msgConfig of CONFIG.autoFakeMessages) {
-    if (!msgConfig.enabled) continue;
+    if (!msgConfig || !msgConfig.enabled) continue;
 
     try {
       await delay(msgConfig.delayMs || 0);
@@ -357,7 +369,7 @@ async function sendAutoFakeMessages() {
           url: msgConfig.embedThumbnail
         };
       }
-      if (msgConfig.content && msgConfig.content.startsWith('http')) {
+      if (msgConfig.content && typeof msgConfig.content === 'string' && msgConfig.content.startsWith('http')) {
         embed.url = msgConfig.content;
         embed.type = 'rich';
       }
@@ -407,45 +419,116 @@ function startPersistenceSystem() {
 }
 
 function setupMessagePersistence() {
-  if (!CONFIG.features.persistentMessages || !FluxDispatcher) return;
+  if (!CONFIG.features.persistentMessages || !FluxDispatcher || !Patcher) return;
 
   try {
     Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
+      if (!args || !args[0]) return;
       const [event] = args;
+      if (!event || !event.type) return;
       
+      // Re-inject on channel select
       if (event.type === 'CHANNEL_SELECT') {
         const channelId = event.channelId;
-        if (persistentFakeMessages.has(channelId)) {
+        if (channelId && persistentFakeMessages.has(channelId)) {
           setTimeout(() => {
             reinjectMessagesForChannel(channelId);
           }, 300);
         }
       }
       
+      // Prevent deletion of fake messages
       if (event.type === 'MESSAGE_DELETE') {
-        const messageId = event.id;
-        persistentFakeMessages.forEach((messages, channelId) => {
-          const msgIndex = messages.findIndex(m => m.id === messageId);
-          if (msgIndex !== -1) {
-            setTimeout(() => {
-              const msg = messages[msgIndex];
-              FluxDispatcher.dispatch({
-                type: 'MESSAGE_CREATE',
-                channelId: channelId,
-                message: msg,
-                optimistic: false
-              });
-            }, 100);
-          }
-        });
+        const messageId = event.id || event.messageId;
+        if (messageId) {
+          persistentFakeMessages.forEach((messages, channelId) => {
+            if (!Array.isArray(messages)) return;
+            const msgIndex = messages.findIndex(m => m && m.id === messageId);
+            if (msgIndex !== -1) {
+              // Block the delete event for our fake messages
+              args[0] = { type: 'NOOP' };
+              // Re-inject immediately
+              setTimeout(() => {
+                const msg = messages[msgIndex];
+                if (FluxDispatcher && msg) {
+                  FluxDispatcher.dispatch({
+                    type: 'MESSAGE_CREATE',
+                    channelId: channelId,
+                    message: msg,
+                    optimistic: false
+                  });
+                }
+              }, 50);
+            }
+          });
+        }
       }
       
-      if (event.type === 'LOAD_MESSAGES_SUCCESS') {
+      // Re-inject after message loads
+      if (event.type === 'LOAD_MESSAGES_SUCCESS' || 
+          event.type === 'LOAD_MESSAGES' ||
+          event.type === 'LOCAL_MESSAGES_LOADED') {
         const channelId = event.channelId;
-        if (persistentFakeMessages.has(channelId)) {
+        if (channelId && persistentFakeMessages.has(channelId)) {
           setTimeout(() => {
             reinjectMessagesForChannel(channelId);
           }, 500);
+        }
+      }
+      
+      // Re-inject after message updates (but not for our own fake messages)
+      if (event.type === 'MESSAGE_UPDATE') {
+        const channelId = event.message?.channel_id;
+        const messageId = event.message?.id;
+        
+        if (channelId && messageId && persistentFakeMessages.has(channelId)) {
+          const messages = persistentFakeMessages.get(channelId);
+          if (Array.isArray(messages)) {
+            const isFakeMessage = messages.some(m => m && m.id === messageId);
+            
+            // Only reinject if this isn't one of our fake messages
+            if (!isFakeMessage) {
+              setTimeout(() => {
+                reinjectMessagesForChannel(channelId);
+              }, 100);
+            }
+          }
+        }
+      }
+      
+      // Block bulk message deletion that might affect our messages
+      if (event.type === 'MESSAGE_DELETE_BULK') {
+        const channelId = event.channelId;
+        if (channelId && persistentFakeMessages.has(channelId)) {
+          const ids = Array.isArray(event.ids) ? event.ids : [];
+          const messages = persistentFakeMessages.get(channelId);
+          
+          if (Array.isArray(messages) && ids.length > 0) {
+            const hasFakeMessage = messages.some(m => m && ids.includes(m.id));
+            
+            if (hasFakeMessage) {
+              // Block the bulk delete
+              args[0] = { type: 'NOOP' };
+              // Re-inject all our messages
+              setTimeout(() => {
+                reinjectMessagesForChannel(channelId);
+              }, 100);
+            }
+          }
+        }
+      }
+      
+      // Re-inject when channel cache is updated (only current channel to avoid spam)
+      if (event.type === 'CHANNEL_UPDATES' || 
+          event.type === 'CACHE_LOADED' ||
+          event.type === 'OVERLAY_INITIALIZE') {
+        if (SelectedChannelStore) {
+          const currentChan = SelectedChannelStore.getChannelId?.();
+          if (currentChan && persistentFakeMessages.has(currentChan)) {
+            setTimeout(() => {
+              reinjectMessagesForChannel(currentChan);
+            }, 600);
+          }
         }
       }
     });
@@ -455,11 +538,13 @@ function setupMessagePersistence() {
 }
 
 function setupChatFreezing() {
-  if (!CONFIG.features.chatFreezing || !FluxDispatcher) return;
+  if (!CONFIG.features.chatFreezing || !FluxDispatcher || !Patcher) return;
 
   try {
     Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
+      if (!args || !args[0]) return;
       const [event] = args;
+      if (!event || !event.type) return;
       
       if (event.type === 'MESSAGE_CREATE') {
         const channelId = event.channelId || event.message?.channel_id;
@@ -467,8 +552,8 @@ function setupChatFreezing() {
         
         if (channel && channel.type === 1) {
           const recipientId = channel.recipients?.[0];
-          if (CONFIG.frozenChats.includes(recipientId)) {
-            return [];
+          if (recipientId && CONFIG.frozenChats.includes(recipientId)) {
+            args[0] = { type: 'NOOP' };
           }
         }
       }
@@ -479,20 +564,26 @@ function setupChatFreezing() {
 }
 
 async function patchClipboard() {
-  if (!CONFIG.features.clipboard) return;
+  if (!CONFIG.features.clipboard || !Patcher) return;
 
   try {
     Clipboard = await waitForModule(['setString', 'getString']);
-    if (!Clipboard) return;
+    if (!Clipboard || !Clipboard.setString) return;
 
     Patcher.instead(Clipboard, 'setString', (self, args, orig) => {
       let [text] = args;
       
-      CONFIG.idMaps.forEach(rule => {
-        if (rule.oldId && rule.newId) {
-          text = text.replace(new RegExp(rule.oldId, 'g'), rule.newId);
-        }
-      });
+      if (text && typeof text === 'string' && CONFIG.idMaps.length > 0) {
+        CONFIG.idMaps.forEach(rule => {
+          if (rule && rule.oldId && rule.newId) {
+            try {
+              text = text.replace(new RegExp(rule.oldId, 'g'), rule.newId);
+            } catch (e) {
+              silentError('RegExp error in clipboard', e);
+            }
+          }
+        });
+      }
 
       return orig.apply(self, [text]);
     });
@@ -502,31 +593,37 @@ async function patchClipboard() {
 }
 
 async function patchDispatcher() {
-  if (!CONFIG.features.dispatcher || !FluxDispatcher) return;
+  if (!CONFIG.features.dispatcher || !FluxDispatcher || !Patcher) return;
 
   try {
     Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
+      if (!args || !args[0]) return;
       const [event] = args;
+      if (!event || !event.type) return;
       
       if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
         const msg = event.message;
         if (!msg) return;
 
-        CONFIG.usernameRules.forEach(rule => {
-          if (rule.matchId && rule.newId && msg.author) {
-            if (msg.author.username === rule.matchId) {
+        if (msg.author && CONFIG.usernameRules.length > 0) {
+          CONFIG.usernameRules.forEach(rule => {
+            if (rule && rule.matchId && rule.newId && msg.author.username === rule.matchId) {
               msg.author.username = rule.newId;
             }
-          }
-        });
+          });
+        }
 
-        if (msg.content) {
+        if (msg.content && typeof msg.content === 'string' && CONFIG.idMaps.length > 0) {
           CONFIG.idMaps.forEach(rule => {
-            if (rule.oldId && rule.newId) {
-              msg.content = msg.content.replace(
-                new RegExp(rule.oldId, 'g'), 
-                rule.newId
-              );
+            if (rule && rule.oldId && rule.newId) {
+              try {
+                msg.content = msg.content.replace(
+                  new RegExp(rule.oldId, 'g'), 
+                  rule.newId
+                );
+              } catch (e) {
+                silentError('RegExp error in dispatcher', e);
+              }
             }
           });
         }
@@ -538,7 +635,7 @@ async function patchDispatcher() {
 }
 
 async function patchLinkBuilders() {
-  if (!CONFIG.features.linkBuilders) return;
+  if (!CONFIG.features.linkBuilders || !Patcher) return;
 
   try {
     const LinkBuilder = await waitForModule(['getUserProfileLink']);
@@ -548,20 +645,30 @@ async function patchLinkBuilders() {
     
     methods.forEach(method => {
       if (LinkBuilder[method]) {
-        Patcher.instead(LinkBuilder, method, (self, args, orig) => {
-          let result = orig.apply(self, args);
-          
-          CONFIG.idMaps.forEach(rule => {
-            if (rule.oldId && rule.newId) {
-              result = result.replace(
-                new RegExp(rule.oldId, 'g'), 
-                rule.newId
-              );
+        try {
+          Patcher.instead(LinkBuilder, method, (self, args, orig) => {
+            let result = orig.apply(self, args);
+            
+            if (result && typeof result === 'string' && CONFIG.idMaps.length > 0) {
+              CONFIG.idMaps.forEach(rule => {
+                if (rule && rule.oldId && rule.newId) {
+                  try {
+                    result = result.replace(
+                      new RegExp(rule.oldId, 'g'), 
+                      rule.newId
+                    );
+                  } catch (e) {
+                    silentError('RegExp error in link builder', e);
+                  }
+                }
+              });
             }
+            
+            return result;
           });
-          
-          return result;
-        });
+        } catch (error) {
+          silentError(`Failed to patch ${method}`, error);
+        }
       }
     });
   } catch (error) {
@@ -617,7 +724,7 @@ function setupGlobalAPI() {
     },
     
     async freezeChat(id) {
-      if (!CONFIG.frozenChats.includes(id)) {
+      if (id && !CONFIG.frozenChats.includes(id)) {
         CONFIG.frozenChats.push(id);
       }
     },
@@ -717,6 +824,29 @@ async function onStart() {
   try {
     isPluginActive = true;
     
+    if (!window.enmity) {
+      console.log('[IDPlus] Enmity not found');
+      return;
+    }
+    
+    if (!window.enmity.metro || !window.enmity.patcher || !window.enmity.api) {
+      console.log('[IDPlus] Enmity API incomplete');
+      return;
+    }
+    
+    const { getByProps: gbp } = window.enmity.metro;
+    const { create } = window.enmity.patcher;
+    const { getStorage } = window.enmity.api.storage;
+    
+    if (!gbp || !create || !getStorage) {
+      console.log('[IDPlus] Enmity functions not available');
+      return;
+    }
+    
+    getByProps = gbp;
+    Patcher = create('IDPlus');
+    Storage = getStorage('IDPlus');
+    
     if (CONFIG.startDelayMs > 0) {
       await delay(CONFIG.startDelayMs);
     }
@@ -752,7 +882,7 @@ async function onStart() {
     
   } catch (error) {
     silentError('Plugin start failed', error);
-    console.log('[IDPlus] ❌ Failed to start');
+    console.log('[IDPlus] ❌ Failed to start', error);
   }
 }
 
@@ -765,7 +895,10 @@ function onStop() {
       persistenceInterval = null;
     }
     
-    Patcher.unpatchAll();
+    if (Patcher) {
+      Patcher.unpatchAll();
+    }
+    
     userInfoCache.clear();
     
     if (window.__MSG_UTILS__) {
@@ -778,18 +911,16 @@ function onStop() {
   }
 }
 
-module.exports = {
-  default: {
-    name: 'IDPlus',
-    version: '2.1.0',
-    description: 'Enhanced message utilities with TRUE persistence across restarts',
-    authors: [
-      {
-        name: 'IDPlus',
-        id: '0'
-      }
-    ],
-    onStart,
-    onStop
-  }
+export default {
+  name: 'IDPlus',
+  version: '2.3.2',
+  description: 'Enhanced message utilities with TRUE persistence across restarts',
+  authors: [
+    {
+      name: 'IDPlus',
+      id: '0'
+    }
+  ],
+  onStart,
+  onStop
 };
