@@ -33,7 +33,7 @@
              // - You can leave USERNAME empty and it will be auto-populated
              // - This works for any user ID you provide in fakeMessage() calls too!
              // 
-             const USER_ID = "1323760789122842735";           // Your Discord User ID (will auto-fetch username)
+             const USER_ID = "384837956944527360";           // Your Discord User ID (will auto-fetch username)
              const USERNAME = "";                            // Your username (leave empty to auto-fetch from USER_ID)
              const AVATAR_URL = "";                          // Your avatar URL (leave empty to auto-fetch from USER_ID)
             
